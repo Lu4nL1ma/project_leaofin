@@ -12,6 +12,12 @@
     <div class="dashboard-card">
         
         <form method="GET" class="filter-section">
+
+            <div class="filter-field">
+                <label for="fornecedor">Data</label>
+                <input type="text" id="data" name="data" value="{{ request.GET.data }}" placeholder="Ex: 11/11/1111">
+            </div>
+
             <div class="filter-field">
                 <label for="fornecedor">Fornecedor</label>
                 <input type="text" id="fornecedor" name="fornecedor" value="{{ request.GET.fornecedor }}" placeholder="Ex: Equatorial">
