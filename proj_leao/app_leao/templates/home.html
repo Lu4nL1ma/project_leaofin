@@ -1,0 +1,99 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Financeiro</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+
+    <div class="dashboard-card">
+        
+        <form method="GET" class="filter-section">
+            <div class="filter-field">
+                <label for="fornecedor">Fornecedor</label>
+                <input type="text" id="fornecedor" name="fornecedor" value="{{ request.GET.fornecedor }}" placeholder="Ex: Equatorial">
+            </div>
+            
+            <div class="filter-field">
+                <label for="categoria">Categoria</label>
+                <input type="text" id="categoria" name="categoria" value="{{ request.GET.categoria }}" placeholder="Ex: Aluguel">
+            </div>
+
+            <button type="submit" class="btn-filter">Aplicar Filtros</button>
+
+            <button type="button" class="btn-filter btn-new-record">
+                <a href="{% url "forms" %}">Novo Registro</a>
+            </button>
+        </form>
+
+        <div class="table-responsive">
+            <table class="hybrid-table">
+                <thead>
+                    <tr>
+                        <th style="width: 45px; background-color: #f8fafc;"></th> 
+                        <th>Vencimento</th>
+                        <th>Fornecedor</th>
+                        <th>Categoria</th>
+                        <th>Banco</th>
+                        <th class="text-center">Parcela</th>
+                        <th class="text-right">Valor</th>
+                        <th>Observação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in page_obj %}
+                    <tr>
+                        <td class="row-index">{{ page_obj.start_index|add:forloop.counter0 }}</td>
+                        <td class="text-center">{{ item.vencimento|date:"d/m/Y" }}</td>
+                        <td>{{ item.fornecedor }}</td>
+                        <td>{{ item.categoria }}</td>
+                        <td>{{ item.banco }}</td>
+                        <td class="text-center">{{ item.parcela }}</td>
+                        <td class="text-right" style="font-weight: 600;">R$ {{ item.valor }}</td>
+                        <td class="col-obs" title="{{ item.observacao }}">{{ item.observacao|default:"-" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td class="row-index">1</td>
+                        <td colspan="7" style="text-align: center; color: #94a3b8; font-style: italic; padding: 30px;">
+                            Nenhum registro localizado no banco de dados.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination-section">
+            <div>
+                Mostrando <b>{{ page_obj.start_index }}</b> a <b>{{ page_obj.end_index }}</b> de <b>{{ page_obj.paginator.count }}</b> registros
+            </div>
+            
+            {% if page_obj.has_other_pages %}
+            <div class="page-buttons">
+                {% if page_obj.has_previous %}
+                    <a class="page-btn" href="?page={{ page_obj.previous_page_number }}{% if request.GET.fornecedor %}&fornecedor={{ request.GET.fornecedor }}{% endif %}{% if request.GET.categoria %}&categoria={{ request.GET.categoria }}{% endif %}">&laquo;</a>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <span class="page-btn active">{{ num }}</span>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <a class="page-btn" href="?page={{ num }}{% if request.GET.fornecedor %}&fornecedor={{ request.GET.fornecedor }}{% endif %}{% if request.GET.categoria %}&categoria={{ request.GET.categoria }}{% endif %}">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <a class="page-btn" href="?page={{ page_obj.next_page_number }}{% if request.GET.fornecedor %}&fornecedor={{ request.GET.fornecedor }}{% endif %}{% if request.GET.categoria %}&categoria={{ request.GET.categoria }}{% endif %}">&raquo;</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+</body>
+</html>
