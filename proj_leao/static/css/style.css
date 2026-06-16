@@ -1,228 +1,273 @@
-/* Reset e Base */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+/* ==========================================================================
+   Reset e Configurações Base
+   ========================================================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-        body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background-color: #f8fafc; 
-            color: #334155;
-            padding: 30px 20px;
-        }
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background-color: #f8fafc; 
+    color: #334155;
+    padding: 30px 20px;
+}
 
-        /* Container Principal Autêntico */
-        .dashboard-card {
-            background-color: #ffffff;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            max-width: 1200px;
-            margin: 0 auto;
-            overflow: hidden;
-        }
+/* ==========================================================================
+   Novo: Cabeçalho e Logo (Canto Superior Direito)
+   ========================================================================== */
+/* ==========================================================================
+   Modificado: Cabeçalho com Logo na Esquerda e Título Centralizado
+   ========================================================================== */
+.main-header {
+    max-width: 1200px;
+    margin: 0 auto 20px auto; /* Centraliza o bloco com o card e dá espaçamento abaixo */
+    display: flex;
+    align-items: center;
+    justify-content: center;  /* Centraliza o conteúdo (o h1) horizontalmente */
+    position: relative;       /* Permite que a logo se posicione em relação a este bloco */
+    min-height: 50px;         /* Garante uma altura mínima para o cabeçalho */
+    padding: 0 5px;
+}
 
-        /* 1. BARRA DE FILTROS MODERNA */
-        .filter-section {
-            background-color: #ffffff;
-            border-bottom: 1px solid #e2e8f0;
-            padding: 16px 20px;
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
+.main-header h1 {
+    font-size: 34px;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+    text-align: center;       /* Garante a centralização do texto */
+}
 
-        .filter-field {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
+.header-logo {
+    max-height: 45px;         /* Controla o tamanho da sua logo */
+    width: auto;
+    object-fit: contain;
+    
+    /* O SEGREDO PARA CENTRALIZAR O TEXTO PERFEITAMENTE: */
+    position: absolute;       /* Remove a logo do fluxo normal para não empurrar o h1 */
+    left: 5px;                /* Fixa a logo colada no canto esquerdo */
+}
 
-        .filter-field label {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #64748b;
-        }
+/* ==========================================================================
+   Container Principal (Dashboard Card)
+   ========================================================================== */
+.dashboard-card {
+    background-color: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    max-width: 1200px;
+    margin: 0 auto;
+    overflow: hidden;
+}
 
-        .filter-field input {
-            border: 1px solid #cbd5e1;
-            padding: 6px 12px;
-            font-size: 13px;
-            border-radius: 4px;
-            outline: none;
-            color: #1e293b;
-            transition: all 0.2s;
-            min-width: 180px;
-        }
+/* ==========================================================================
+   1. Barra de Filtros Moderna
+   ========================================================================== */
+.filter-section {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 16px 20px;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+}
 
-        .filter-field input:focus {
-            border-color: #0284c7; 
-            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
-        }
+.filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
 
-        .btn-filter {
-            background-color: #0f172a; 
-            color: white;
-            border: none;
-            padding: 8px 20px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            border-radius: 4px;
-            align-self: flex-end; 
-            transition: background 0.2s;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            text-decoration: none;
-        }
+.filter-field label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+}
 
-        .btn-filter:hover {
-            background-color: #1e293b;
-        }
+.filter-field input {
+    border: 1px solid #cbd5e1;
+    padding: 6px 12px;
+    font-size: 13px;
+    border-radius: 4px;
+    outline: none;
+    color: #1e293b;
+    transition: all 0.2s;
+    min-width: 180px;
+}
 
-        /* Estilização específica do botão de Novo Registro para destacar do filtro */
-        .btn-new-record {
-            background-color: #0284c7;
-            align-self: flex-end;
-            padding: 0; /* Remove o padding do botão para o link ocupar 100% da área */
-            border-radius: 4px;
-            overflow: hidden;
-        }
+.filter-field input:focus {
+    border-color: #0284c7; 
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+}
 
-        .btn-new-record:hover {
-            background-color: #0369a1;
-        }
+.btn-filter {
+    background-color: #0f172a; 
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 4px;
+    align-self: flex-end; 
+    transition: background 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
 
-        .btn-new-record a {
-            color: #ffffff;
-            text-decoration: none;
-            padding: 8px 20px;
-            display: block;
-            width: 100%;
-            height: 100%;
-            font-size: 13px;
-            font-weight: 600;
-        }
+.btn-filter:hover {
+    background-color: #1e293b;
+}
 
-        /* 2. ÁREA DA TABELA (Equilíbrio com Excel) */
-        .table-responsive {
-            overflow-x: auto;
-            width: 100%;
-        }
+/* Botão de Novo Registro */
+.btn-new-record {
+    background-color: #0284c7;
+    align-self: flex-end;
+    padding: 0; /* Permite que o link ocupe 100% da área do botão */
+    border-radius: 4px;
+    overflow: hidden;
+}
 
-        .hybrid-table {
-            border-collapse: collapse;
-            width: 100%;
-            font-size: 13px; 
-        }
+.btn-new-record:hover {
+    background-color: #0369a1;
+}
 
-        /* Linha lateral de numeração */
-        .hybrid-table td.row-index {
-            background-color: #f8fafc;
-            color: #94a3b8;
-            text-align: center;
-            font-size: 11px;
-            font-weight: 500;
-            border-right: 2px solid #e2e8f0;
-            border-bottom: 1px solid #e2e8f0;
-            width: 45px;
-            user-select: none;
-        }
+.btn-new-record a {
+    color: #ffffff;
+    text-decoration: none;
+    padding: 8px 20px;
+    display: block;
+    width: 100%;
+    height: 100%;
+    font-size: 13px;
+    font-weight: 600;
+}
 
-        /* Cabeçalho dos Dados */
-        .hybrid-table th {
-            background-color: #f1f5f9; 
-            color: #475569;
-            font-weight: 600;
-            border-bottom: 2px solid #cbd5e1;
-            border-right: 1px solid #e2e8f0;
-            padding: 10px 12px;
-            text-align: left;
-        }
+/* ==========================================================================
+   2. Área da Tabela (Estilo Híbrido Web/Excel)
+   ========================================================================== */
+.table-responsive {
+    overflow-x: auto;
+    width: 100%;
+}
 
-        /* Células de Dados */
-        .hybrid-table td {
-            border-right: 1px solid #e2e8f0;
-            border-bottom: 1px solid #e2e8f0;
-            padding: 8px 12px;
-            white-space: nowrap;
-            background-color: #ffffff;
-            color: #334155;
-        }
+.hybrid-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 13px; 
+}
 
-        .hybrid-table th:last-child, 
-        .hybrid-table td:last-child {
-            border-right: none;
-        }
+/* Coluna lateral de numeração (A, B, C / 1, 2, 3) */
+.hybrid-table td.row-index {
+    background-color: #f8fafc;
+    color: #94a3b8;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 500;
+    border-right: 2px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    width: 45px;
+    user-select: none;
+}
 
-        /* Alinhamentos */
-        .text-center { text-align: center; }
-        .text-right { text-align: right; }
-        
-        .col-obs {
-            max-width: 200px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            color: #64748b;
-            font-style: italic;
-        }
+/* Cabeçalho da Tabela */
+.hybrid-table th {
+    background-color: #f1f5f9; 
+    color: #475569;
+    font-weight: 600;
+    border-bottom: 2px solid #cbd5e1;
+    border-right: 1px solid #e2e8f0;
+    padding: 10px 12px;
+    text-align: left;
+}
 
-        /* Comportamento de foco e seleção sutil */
-        .hybrid-table tbody tr:hover td:not(.row-index) {
-            background-color: #f8fafc; 
-        }
-        
-        .hybrid-table td:not(.row-index):hover {
-            outline: 2px solid #38bdf8; 
-            outline-offset: -2px;
-        }
+/* Células de Dados */
+.hybrid-table td {
+    border-right: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 8px 12px;
+    white-space: nowrap;
+    background-color: #ffffff;
+    color: #334155;
+}
 
-        /* 3. PAGINAÇÃO ESTILO DASHBOARD */
-        .pagination-section {
-            background-color: #ffffff;
-            border-top: 1px solid #e2e8f0;
-            padding: 12px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 13px;
-            color: #64748b;
-        }
+.hybrid-table th:last-child, 
+.hybrid-table td:last-child {
+    border-right: none;
+}
 
-        .page-buttons {
-            display: flex;
-            gap: 4px;
-        }
+/* Classes Auxiliares de Alinhamento e Texto */
+.text-center { text-align: center; }
+.text-right { text-align: right; }
 
-        .page-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 32px;
-            height: 32px;
-            padding: 0 6px;
-            border: 1px solid #e2e8f0;
-            background-color: #ffffff;
-            color: #475569;
-            text-decoration: none;
-            border-radius: 4px;
-            transition: all 0.2s;
-        }
+.col-obs {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #64748b;
+    font-style: italic;
+}
 
-        .page-btn.active {
-            background-color: #0284c7;
-            color: white;
-            border-color: #0284c7;
-            font-weight: 600;
-        }
+/* Efeitos de Interação na Tabela */
+.hybrid-table tbody tr:hover td:not(.row-index) {
+    background-color: #f8fafc; 
+}
 
-        .page-btn:hover:not(.active) {
-            background-color: #f1f5f9;
-            border-color: #cbd5e1;
-        }
+.hybrid-table td:not(.row-index):hover {
+    outline: 2px solid #38bdf8; 
+    outline-offset: -2px;
+}
+
+/* ==========================================================================
+   3. Paginação do Dashboard
+   ========================================================================== */
+.pagination-section {
+    background-color: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: #64748b;
+}
+
+.page-buttons {
+    display: flex;
+    gap: 4px;
+}
+
+.page-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 6px;
+    border: 1px solid #e2e8f0;
+    background-color: #ffffff;
+    color: #475569;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.page-btn.active {
+    background-color: #0284c7;
+    color: white;
+    border-color: #0284c7;
+    font-weight: 600;
+}
+
+.page-btn:hover:not(.active) {
+    background-color: #f1f5f9;
+    border-color: #cbd5e1;
+}

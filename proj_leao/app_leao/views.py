@@ -1,7 +1,8 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from app_leao.models import ContaPagar
 from django.core.paginator import Paginator
 from django.contrib import messages
+from datetime import datetime
 
 def home(request):
     # 1. Busca todos os registros do banco (a ordenação padrão [-vencimento] vem do Model Meta)
@@ -13,14 +14,23 @@ def home(request):
     filtro_data = request.GET.get('data')
 
     # 3. Aplica os filtros no ORM caso o usuário tenha digitado algo (o __icontains ignora maiúsculas/minúsculas)
-    if filtro_fornecedor:
+    if filtro_fornecedor and filtro_fornecedor.strip():
         queryset = queryset.filter(fornecedor__icontains=filtro_fornecedor)
         
-    if filtro_categoria:
+    if filtro_categoria and filtro_categoria.strip():
         queryset = queryset.filter(categoria__icontains=filtro_categoria)
 
-    if filtro_categoria:
-        queryset = queryset.filter(data__icontains=filtro_data)
+    # CORRIGIDO: Só tenta converter e filtrar a data se ela foi preenchida
+    if filtro_data and filtro_data.strip():
+        try:
+            data_objeto = datetime.strptime(filtro_data.strip(), '%d/%m/%Y')
+            filtro_data_formatada = data_objeto.strftime('%Y-%m-%d')
+            
+            # CORRIGIDO: Atribuído ao queryset e usando a variável correta
+            queryset = queryset.filter(vencimento=filtro_data_formatada)
+        except ValueError:
+            # Caso o usuário digite uma data maluca (ex: 99/99/9999)
+            messages.error(request, "Formato de data inválido. Use DD/MM/AAAA.")
 
     # 4. Configura a Paginação para exibir estritamente 20 linhas por página
     paginator = Paginator(queryset, 20)
@@ -59,7 +69,8 @@ def form(request):
                 observacao=observacao
             )
             messages.success(request, "Lançamento cadastrado com sucesso!")
-            return redirect('nome_da_sua_view_de_listagem') # Mude para a sua rota de sucesso
+
+            return redirect(request, 'home.html') # Mude para a sua rota de sucesso
         except Exception as e:
             messages.error(request, f"Erro ao salvar: {e}")
 

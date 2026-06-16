@@ -4,18 +4,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Financeiro</title>
+    <title>Contas a Pagar</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body>
+
+    <header class="main-header">
+        <img src="{% static 'img/Clube_do_Remo.png' %}" alt="Logo" class="header-logo">
+        <h1>Contas a Pagar</h1>
+    </header>
 
     <div class="dashboard-card">
         
         <form method="GET" class="filter-section">
 
             <div class="filter-field">
-                <label for="fornecedor">Data</label>
-                <input type="text" id="data" name="data" value="{{ request.GET.data }}" placeholder="Ex: 11/11/1111">
+                <label for="data">Data</label> <input type="text" id="data" name="data" value="{{ request.GET.data }}" placeholder="Ex: 11/11/1111">
             </div>
 
             <div class="filter-field">
@@ -31,7 +35,7 @@
             <button type="submit" class="btn-filter">Aplicar Filtros</button>
 
             <button type="button" class="btn-filter btn-new-record">
-                <a href="{% url "forms" %}">Novo Registro</a>
+                <a href="{% url 'forms' %}">Novo Registro</a>
             </button>
         </form>
 
