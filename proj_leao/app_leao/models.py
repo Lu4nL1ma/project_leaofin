@@ -7,7 +7,7 @@ class ContaPagar(models.Model):
         db_index=True
     )
     
-    # Nome do fornecedor (com índice para buscas rápidas)
+    # Nome do fornecedor
     fornecedor = models.CharField(
         max_length=150, 
         verbose_name="Fornecedor",
@@ -48,12 +48,35 @@ class ContaPagar(models.Model):
         null=True
     )
 
-    parcela = models.CharField(
-        max_length=20, 
-        verbose_name="Status", 
-        default=""
+    # ==========================================================================
+    # NOVAS COLUNAS AJUSTADAS PARA NÃO DAR ERRO DE MIGRAÇÃO
+    # ==========================================================================
+
+    # Corrigido: Campo de data não aceita "" como padrão. Mudado para aceitar nulo.
+    ultimo_pagamento = models.DateField(
+        verbose_name="Último Pagamento",
+        db_index=True,
+        blank=True,
+        null=True
     )
 
+    # Corrigido: Mudado para CharField (texto curto) e definido um valor padrão de texto
+    status = models.CharField(
+        max_length=30,
+        verbose_name="Status",
+        default="Pendente",
+        blank=True
+    )
+
+    # Corrigido: Fechado o parêntese e adicionado null/blank para aceitar dados antigos vazios
+    conciliado = models.CharField(
+        max_length=20,
+        verbose_name="Conciliado",
+        default="Não",
+        blank=True,
+        null=True
+    )
+    
     class Meta:
         verbose_name = "Conta a Pagar"
         verbose_name_plural = "Contas a Pagar"

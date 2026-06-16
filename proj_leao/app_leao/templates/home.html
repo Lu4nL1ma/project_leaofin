@@ -43,7 +43,8 @@
             <table class="hybrid-table">
                 <thead>
                     <tr>
-                        <th style="width: 45px; background-color: #f8fafc;"></th> 
+                        <th style="width: 45px; background-color: #f8fafc;"></th>
+                        <th>Conciliado</th> 
                         <th>Vencimento</th>
                         <th>Fornecedor</th>
                         <th>Categoria</th>
@@ -51,12 +52,14 @@
                         <th class="text-center">Parcela</th>
                         <th class="text-right">Valor</th>
                         <th>Observação</th>
+                        <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in page_obj %}
                     <tr>
                         <td class="row-index">{{ page_obj.start_index|add:forloop.counter0 }}</td>
+                        <td>{{ item.conciliado }}</td>
                         <td class="text-center">{{ item.vencimento|date:"d/m/Y" }}</td>
                         <td>{{ item.fornecedor }}</td>
                         <td>{{ item.categoria }}</td>
@@ -64,6 +67,7 @@
                         <td class="text-center">{{ item.parcela }}</td>
                         <td class="text-right" style="font-weight: 600;">R$ {{ item.valor }}</td>
                         <td class="col-obs" title="{{ item.observacao }}">{{ item.observacao|default:"-" }}</td>
+                        <td class="col-obs" title="{{ item.status }}">{{ item.status|default:"-" }}</td>
                     </tr>
                     {% empty %}
                     <tr>

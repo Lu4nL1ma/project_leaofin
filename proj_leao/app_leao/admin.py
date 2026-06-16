@@ -1,35 +1,47 @@
 from django.contrib import admin
 from app_leao.models import ContaPagar
 
-# Register your models here.
-
 @admin.register(ContaPagar)
 class ContaPagarAdmin(admin.ModelAdmin):
-    # Colunas que vão aparecer na listagem geral do painel
-    list_display = ('vencimento', 'fornecedor', 'categoria', 'banco', 'parcela', 'valor')
+    # 1. Colunas que vão aparecer na listagem geral (estilo tabela)
+    list_display = (
+        'vencimento', 
+        'fornecedor', 
+        'categoria', 
+        'banco', 
+        'valor', 
+        'status', 
+        'conciliado'
+    )
     
-    # Transforma esses campos em links para clicar e editar a conta
+    # 2. Transforma esses campos em links clicáveis para abrir a edição
     list_display_links = ('vencimento', 'fornecedor')
     
-    # Cria uma barra de pesquisa útil para buscar por fornecedor ou categoria
-    search_fields = ('fornecedor', 'categoria', 'observacao')
+    # 3. Cria uma barra de pesquisa para buscar rapidamente por texto
+    search_fields = ('fornecedor', 'categoria', 'observacao', 'banco')
     
-    # Filtros laterais para facilitar a navegação (ajuda muito quando tiver muitas contas)
-    list_filter = ('vencimento', 'categoria', 'banco')
+    # 4. Filtros práticos na lateral direita (as novas colunas ajudam muito aqui)
+    list_filter = ('status', 'conciliado', 'vencimento', 'banco', 'categoria')
     
-    # Paginação: exibe 20 contas por página
+    # 5. Permite editar o Status e a Conciliação direto na tabela, sem ter que abrir o registro (opcional, muito produtivo!)
+    list_editable = ('status', 'conciliado')
+    
+    # 6. Paginação: exibe 20 contas por página
     list_per_page = 20
     
-    # Organiza os campos dentro da tela de edição/cadastro em blocos
+    # 7. Organiza a estrutura da tela de formulário/edição do Admin em blocos
     fieldsets = (
         ('Informações Principais', {
             'fields': ('vencimento', 'valor', 'fornecedor')
         }),
-        ('Classificação e Pagamento', {
+        ('Classificação e Meio de Pagamento', {
             'fields': ('categoria', 'banco', 'parcela')
+        }),
+        ('Controlo de Pagamento e Fluxo', {
+            'fields': ('ultimo_pagamento', 'status', 'conciliado')
         }),
         ('Informações Adicionais', {
             'fields': ('observacao',),
-            'classes': ('collapse',), # Deixa o bloco de observação recolhido por padrão
+            'classes': ('collapse',), # Deixa o bloco de texto de observações recolhido por padrão
         }),
     )
