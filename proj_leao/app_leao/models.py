@@ -60,6 +60,14 @@ class ContaPagar(models.Model):
         null=True
     )
 
+    # Valor financeiro (até 999.999.999,99)
+    juros = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        verbose_name="Juros (R$)",
+        default=0
+    )
+
     # Corrigido: Mudado para CharField (texto curto) e definido um valor padrão de texto
     status = models.CharField(
         max_length=30,

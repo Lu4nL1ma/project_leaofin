@@ -3,6 +3,7 @@ from app_leao.models import ContaPagar
 from django.core.paginator import Paginator
 from django.contrib import messages
 from datetime import datetime
+from django.http import JsonResponse
 
 def home(request):
     # 1. Busca todos os registros do banco (a ordenação padrão [-vencimento] vem do Model Meta)
@@ -95,3 +96,30 @@ def conciliar(request, identi):
 
     # Redireciona de volta para a função home (sua tabela)
     return redirect('homes') # Use uma string com o nome que está no urls.py
+
+def atualizar_status_json(request, identi):
+    if request.method == 'POST':
+        conta = get_object_or_404(ContaPagar, id=identi)
+        
+        # 1. Coleta os dados do POST do formulário do Modal
+        novo_status = request.POST.get('status')
+        nova_data = request.POST.get('ultimo_pagamento')
+        novo_juros = request.POST.get('juros')
+        
+        # 2. Aplica as validações e atualiza o objeto
+        if novo_status:
+            conta.status = novo_status
+            
+        if nova_data:  # Se houver data preenchida
+            conta.ultimo_pagamento = nova_data
+        else:          # Se estiver vazia, salva como nulo (conforme seu model)
+            conta.ultimo_pagamento = None
+            
+        if novo_juros:
+            conta.juros = novo_juros
+            
+        # 3. Salva de vez no SQLite
+        conta.save()
+        return JsonResponse({'success': True})
+            
+    return JsonResponse({'success': False}, status=400)

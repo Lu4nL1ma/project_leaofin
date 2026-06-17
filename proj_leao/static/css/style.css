@@ -384,3 +384,71 @@ body {
     color: #dc2626;
     border: 1px solid #fecaca;
 }
+
+/* Fundo escurecido que cobre a tela toda */
+.modal-overlay {
+    display: none; /* Escondido por padrão */
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Exibe o modal quando a classe active for adicionada pelo JS */
+.modal-overlay.active {
+    display: flex;
+}
+
+/* O cartão do modal em si */
+.modal-card {
+    background: #ffffff;
+    padding: 24px;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    color: #0f172a;
+}
+
+.close-modal-btn {
+    background: none; border: none; font-size: 24px; cursor: pointer; color: #94a3b8;
+}
+
+.modal-body {
+    margin-bottom: 20px;
+}
+
+.modal-body label {
+    display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 8px;
+}
+
+.modal-body select {
+    width: 100%; height: 36px; padding: 0 8px; border-radius: 4px; border: 1px solid #cbd5e1; outline: none;
+}
+
+.modal-footer {
+    display: flex; justify-content: flex-end; gap: 12px;
+}
+
+.btn-cancelar {
+    background: #f1f5f9; color: #475569; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600;
+}
+
+.btn-salvar-modal {
+    background: #0284c7; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
