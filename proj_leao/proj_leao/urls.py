@@ -5,6 +5,6 @@ from app_leao.views import home, form, conciliar
 urlpatterns = [
     path('', home, name="homes"),
     path('/form', form, name="forms"),
-    path('/concili', conciliar, name="concili"),
+    path('/concili/<int:identi>/', conciliar, name="concili"),
     path("admin/", admin.site.urls),
 ]

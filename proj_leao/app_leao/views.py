@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from app_leao.models import ContaPagar
 from django.core.paginator import Paginator
 from django.contrib import messages
@@ -78,7 +78,20 @@ def form(request):
     return render(request, 'form.html') # Ajuste o caminho do seu HTML
 
 
-def conciliar(request):
-    id = request.POST.get('id')
-    print(id)
-    return redirect(home)
+def conciliar(request, identi):
+    # O Django já recebe o ID direto da URL
+    print(f"ID recebido para conciliação: {identi}")
+
+    # Busca a linha no SQLite
+    conta = get_object_or_404(ContaPagar, id=identi)
+    
+    # Altera o status baseado no que está atualmente no banco
+    if conta.conciliado == "Sim":
+        conta.conciliado = "Não"
+    else:
+        conta.conciliado = "Sim"
+        
+    conta.save()
+
+    # Redireciona de volta para a função home (sua tabela)
+    return redirect('home') # Use uma string com o nome que está no urls.py

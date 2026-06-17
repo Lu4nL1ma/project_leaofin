@@ -293,3 +293,63 @@ body {
     background-color: #f1f5f9;
     border-color: #cbd5e1;
 }
+
+
+/* Btn Conciliado */
+.btn-conci {
+    background-color: #f0fdf4; /* Verde bem clarinho e discreto de fundo */
+    color: #16a34a;            /* Texto em verde mais escuro e elegante */
+    border: 1px solid #bbf7d0; /* Borda sutil para dar acabamento */
+    padding: 4px 12px;         /* Espaçamento interno para dar formato de botão */
+    font-size: 12px;           /* Tamanho de fonte ideal para tabelas */
+    font-weight: 600;          /* Texto levemente em negrito */
+    border-radius: 20px;       /* Bordas arredondadas estilo pílula */
+    text-decoration: none;     /* Remove o sublinhado padrão de links */
+    
+    /* Alinhamento perfeito do texto com o SVG interno */
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    
+    transition: all 0.2s ease;
+    cursor:pointer
+}
+
+/* Efeito sutil ao passar o mouse por cima */
+.btn-conci {
+    background-color: #dcfce7; /* O fundo escurece de forma bem suave */
+    border-color: #86efac;
+    color: #15803d;
+}
+
+
+/* ==========================================================================
+   Botão de Status: Não Conciliado (Vermelhinho Discreto)
+   ========================================================================== */
+.btn-notconci {
+    background-color: #fef2f2; /* Vermelho bem clarinho e discreto de fundo */
+    color: #dc2626;            /* Texto em vermelho mais escuro e elegante */
+    border: 1px solid #fecaca; /* Borda sutil para dar acabamento */
+    padding: 4px 12px;         /* Espaçamento interno idêntico ao outro botão */
+    font-size: 12px;           
+    font-weight: 600;          
+    border-radius: 20px;       /* Formato de pílula */
+    text-decoration: none;     
+    
+    /* Alinhamento perfeito do texto com o SVG interno */
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    
+    /* Mãozinha ao passar o mouse */
+    cursor: pointer; 
+    
+    transition: all 0.2s ease;
+}
+
+/* Efeito sutil ao passar o mouse por cima */
+.btn-notconci:hover {
+    background-color: #fee2e2; /* O fundo escurece de forma bem suave */
+    border-color: #fca5a5;
+    color: #b91c1c;
+}
