@@ -353,3 +353,34 @@ body {
     border-color: #fca5a5;
     color: #b91c1c;
 }
+
+/* Status Geral Base */
+.status-badge {
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 20px;
+    display: inline-block;
+    text-align: center;
+}
+
+/* Pago (Verdinho) */
+.status-pago {
+    background-color: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+}
+
+/* Pendente/Em aberto (Amarelinho) */
+.status-pendente {
+    background-color: #fefce8;
+    color: #ca8a04;
+    border: 1px solid #fef08a;
+}
+
+/* Atrasado (Vermelhinho) */
+.status-atrasado {
+    background-color: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}

@@ -33,7 +33,7 @@ def home(request):
             messages.error(request, "Formato de data inválido. Use DD/MM/AAAA.")
 
     # 4. Configura a Paginação para exibir estritamente 20 linhas por página
-    paginator = Paginator(queryset, 20)
+    paginator = Paginator(queryset, 15)
     
     # Captura o número da página atual na URL (ex: ?page=2). Se não houver, assume a página 1.
     page_number = request.GET.get('page')
@@ -70,7 +70,7 @@ def form(request):
             )
             messages.success(request, "Lançamento cadastrado com sucesso!")
 
-            return redirect('home') # Mude para a sua rota de sucesso
+            return redirect('homes') # Mude para a sua rota de sucesso
         except Exception as e:
             messages.error(request, f"Erro ao salvar: {e}")
 
@@ -94,4 +94,4 @@ def conciliar(request, identi):
     conta.save()
 
     # Redireciona de volta para a função home (sua tabela)
-    return redirect('home') # Use uma string com o nome que está no urls.py
+    return redirect('homes') # Use uma string com o nome que está no urls.py
