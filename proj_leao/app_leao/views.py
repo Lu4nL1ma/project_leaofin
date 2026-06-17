@@ -79,5 +79,6 @@ def form(request):
 
 
 def conciliar(request):
-    
+    id = request.POST.get('id')
+    print(id)
     return redirect(home)
