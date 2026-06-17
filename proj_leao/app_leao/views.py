@@ -70,9 +70,14 @@ def form(request):
             )
             messages.success(request, "Lançamento cadastrado com sucesso!")
 
-            return redirect(request, 'home.html') # Mude para a sua rota de sucesso
+            return redirect('home') # Mude para a sua rota de sucesso
         except Exception as e:
             messages.error(request, f"Erro ao salvar: {e}")
 
     # Se for GET, apenas renderiza a página do formulário
     return render(request, 'form.html') # Ajuste o caminho do seu HTML
+
+
+def conciliar(request):
+    
+    return redirect(home)
