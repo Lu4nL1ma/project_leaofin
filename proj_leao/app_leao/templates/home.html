@@ -16,138 +16,186 @@
 
     <div class="dashboard-card">
         
+        <!-- O FORMULÁRIO ENGLOBA A SEÇÃO DE FILTROS E A TABELA DE INPUTS -->
         <form method="GET" class="filter-section">
 
-            <div class="filter-field">
-                <label for="data">Data</label> 
-                <input type="text" id="data" name="data" value="{{ request.GET.data }}" placeholder="Ex: 11/11/1111">
-            </div>
+            <!-- BLOCO DE BOTÕES CENTRALIZADOS NA PARTE DE BAIXO DOS INPUTS -->
+            <div class="filter-actions">
+                <button type="submit" class="btn-filter">Aplicar Filtros</button>
+                
+                <!-- BOTÃO LIMPAR FILTROS (Reseta a URL limpando as buscas) -->
+                <a href="{{ request.path }}" class="btn-filter btn-clear">Limpar Filtros</a>
 
-            <div class="filter-field">
-                <label for="fornecedor">Fornecedor</label>
-                <input type="text" id="fornecedor" name="fornecedor" value="{{ request.GET.fornecedor }}" placeholder="Ex: Equatorial">
-            </div>
-            
-            <div class="filter-field">
-                <label for="categoria">Categoria</label>
-                <input type="text" id="categoria" name="categoria" value="{{ request.GET.categoria }}" placeholder="Ex: Aluguel">
-            </div>
-
-            <button type="submit" class="btn-filter">Aplicar Filtros</button>
-
-            <div class="dropdown">
-                <button type="button" class="btn-filter btn-dropdown">
-                    Ações
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16" style="margin-left: 6px;">
-                        <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
-                    </svg>
-                </button>
-                <div class="dropdown-content">
-                    <a href="{% url 'forms' %}">Novo Registro</a>
-                    </div>
-            </div>
-        </form>
-
-        <div class="table-responsive">
-            <table class="hybrid-table">
-                <thead>
-                    <tr>
-                        <th style="width: 45px; background-color: #f8fafc;"></th>
-                        <th> Conciliação </th> 
-                        <th>Vencimento</th>
-                        <th>Fornecedor</th>
-                        <th>Categoria</th>
-                        <th>Banco</th>
-                        <th class="text-center">Parcela</th>
-                        <th class="text-right">Valor</th>
-                        <th>Observação</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-               <tbody>
-    {% for item in page_obj %}
-    <tr>
-        <td class="row-index">{{ page_obj.start_index|add:forloop.counter0 }}</td>
-        
-        <td>
-            <form method="POST" action="{% url 'concili' item.id %}" style="margin: 0;">
-                {% csrf_token %}
-                {% if item.conciliado == "Sim" %}
-                    <button type="submit" class="btn-conci" style="display: inline-flex; align-items: center; gap: 6px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-circle" viewBox="0 0 16 16" color="green">
-                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
-                            <path d="m10.97 4.97-.02.022-3.473 4.425-2.093-2.094a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05"/>
+                <div class="dropdown">
+                    <button type="button" class="btn-filter btn-dropdown">
+                        Ações
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16" style="margin-left: 6px;">
+                            <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
                         </svg>
-                        Conciliado
                     </button>
-                {% else %}
-                    {% if item.status == 'Pago' %}
-                        <button type="submit" class="btn-notconci" style="display: inline-flex; align-items: center; gap: 6px;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-dash-circle" viewBox="0 0 16 16" color="red">
-                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
-                                <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8"/> 
-                            </svg>
-                            Não Conciliado
-                        </button> 
-                    {% else %}
-                        <button type="button" class="btn-notconci" style="display: inline-flex; align-items: center; gap: 6px;" title="Clique para registrar o pagamento" onclick="alert('Atenção: para conciliar esse lançamento é necessário registrar o pagamento!')">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-dash-circle" viewBox="0 0 16 16" color="red">
-                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
-                                <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8"/> 
-                            </svg>
-                            Não Conciliado
-                        </button> 
-                    {% endif %}
-                {% endif %}
-            </form>
-        </td>
-        
-        <td class="text-center">
-            {% if item.vencimento and item.vencimento != "" %}
-                {{ item.vencimento|date:"d/m/Y" }}
-            {% else %}
-                <span style="color: #94a3b8;">-</span>
-            {% endif %}
-        </td>
-        
-        <td>{{ item.fornecedor }}</td>
-        <td>{{ item.categoria }}</td>
-        <td>{{ item.banco }}</td>
-        <td class="text-center">{{ item.parcela }}</td>
-        <td class="text-right" style="font-weight: 600;">R$ {{ item.valor }}</td>
-        <td class="col-obs" title="{{ item.observacao }}">{{ item.observacao|default:"-" }}</td>
-        
-        <td>
-            {% if item.status == "Pago" %}
-                <span class="status-badge status-pago">Pago</span>
-            {% elif item.status == "Pendente" or item.status == "Em aberto" %}
-                <div style="display: inline-flex; align-items: center; gap: 8px;">
-                    <span class="status-badge status-pendente">Pendente</span>
-                    <a href="javascript:void(0);" onclick="abrirModal('{{ item.id }}', '{{ item.ultimo_pagamento|date:'Y-m-d' }}', '{{ item.juros }}')" title="Atualizar Pagamento" style="color: #64748b; cursor: pointer; display: inline-flex;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-database-up" viewBox="0 0 16 16">
-                            <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m.354-5.854 1.5 1.5a.5.5 0 0 1-.708.708L13 11.707V14.5a.5.5 0 0 1-1 0v-2.793l-.646.647a.5.5 0 0 1-.708-.708l1.5-1.5a.5.5 0 0 1 .708 0"/>
-                            <path d="M12.096 6.223A5 5 0 0 0 13 5.698V7c0 .289-.213.654-.753 1.007a4.5 4.5 0 0 1 1.753.25V4c0-1.007-.875-1.755-1.904-2.223C11.022 1.289 9.573 1 8 1s-3.022.289-4.096.777C2.875 2.245 2 2.993 2 4v9c0 1.007.875 1.755 1.904 2.223C4.978 15.71 6.427 16 8 16c.536 0 1.058-.034 1.555-.097a4.5 4.5 0 0 1-.813-.927Q8.378 15 8 15c-1.464 0-2.766-.27-3.682-.687C3.356 13.875 3 13.373 3 13v-1.302c.271.202.58.378.904.525C4.978 12.71 6.427 13 8 13h.027a4.6 4.6 0 0 1 0-1H8c-1.464 0-2.766-.27-3.682-.687C3.356 10.875 3 10.373 3 10V8.698c.271.202.58.378.904.525C4.978 9.71 6.427 10 8 10q.393 0 .774-.024a4.5 4.5 0 0 1 1.102-1.132C9.298 8.944 8.666 9 8 9c-1.464 0-2.766-.27-3.682-.687C3.356 7.875 3 7.373 3 7V5.698c.271.202.58.378.904.525C4.978 6.711 6.427 7 8 7s3.022-.289 4.096-.777M3 4c0-.374.356-.875 1.318-1.313C5.234 2.271 6.536 2 8 2s2.766.27 3.682.687C12.644 3.125 13 3.627 13 4c0 .374-.356.875-1.318 1.313C10.766 5.729 9.464 6 8 6s-2.766-.27-3.682-.687C3.356 4.875 3 4.373 3 4"/>
-                        </svg>
-                    </a>
+                    <div class="dropdown-content">
+                        <a href="{% url 'forms' %}">Novo Registro</a>
+                    </div>
                 </div>
-            {% elif item.status == "Atrasado" %}
-                <span class="status-badge status-atrasado">Atrasado</span>
-            {% else %}
-                <span class="status-badge" style="background-color: #f1f5f9; color: #475569;">{{ item.status|default:"-" }}</span>
-            {% endif %}
-        </td>
-    </tr>
-    {% empty %}
-    <tr>
-        <td colspan="10" style="text-align: center; color: #94a3b8; font-style: italic; padding: 30px;">
-            Nenhum registro localizado no banco de dados.
-        </td>
-    </tr>
-    {% endfor %}
-</tbody>
-            </table>
-        </div>
+            </div>
 
+            <!-- DISTÂNCIA REDUZIDA PARA COLAR OS BOTÕES NO INÍCIO DA TABELA -->
+            <div class="table-responsive" style="margin-top: 5px;">
+                <table class="hybrid-table">
+                    <thead>
+                        <!-- LINHA 1: TÍTULOS DA TABELA -->
+                        <tr>
+                            <th style="width: 45px; background-color: #f8fafc;"></th>
+                            <th>Conciliação</th> 
+                            <th>Vencimento</th>
+                            <th>Fornecedor</th>
+                            <th>Categoria</th>
+                            <th>Banco</th>
+                            <th class="text-center">Parcela</th>
+                            <th class="text-right">Valor</th>
+                            <th>Observação</th>
+                            <th>Status</th>
+                        </tr>
+                        <!-- LINHA 2: INPUTS DE BUSCA INTEIRAMENTE CENTRALIZADOS -->
+                        <tr>
+                            <th style="width: 45px; background-color: #f8fafc;"></th>
+                            <th>
+                                <div class="filter-field">
+                                    <input type="text" id="concili" name="conciliacao" value="{{ request.GET.conciliacao }}" placeholder="Ex: Não" style="max-width: 200px !important;">
+                                </div> 
+                            </th> 
+                            <th>
+                                <div class="filter-field">
+                                    <input type="text" id="data" name="data" value="{{ request.GET.data }}" placeholder="Ex: 18/06/2026" style="max-width: 200px !important;">
+                                </div> 
+                            </th>
+                            <th>
+                                <div class="filter-field">
+                                    <input type="text" id="fornecedor" name="fornecedor" value="{{ request.GET.fornecedor }}" placeholder="Ex: Equatorial" style="max-width: 200px !important;">
+                                </div>
+                            </th>
+                            <th>
+                                <div class="filter-field">
+                                    <input type="text" id="categoria" name="categoria" value="{{ request.GET.categoria }}" placeholder="Ex: Aluguel" style="max-width: 200px !important;">
+                                </div>
+                            </th>
+                            <th>
+                                <div class="filter-field">
+                                    <input type="text" id="banco" name="banco" value="{{ request.GET.banco }}" placeholder="Ex: Nubank" style="max-width: 200px !important;">
+                                </div>
+                            </th>
+                            <th>
+                                <div class="filter-field">
+                                    <input type="text" id="parcela" name="parcela" value="{{ request.GET.parcela }}" placeholder="Ex: 1/1" style="max-width: 200px !important;">
+                                </div>
+                            </th>
+                            <th>
+                                <div class="filter-field">
+                                    <input type="text" id="valor" name="valor" value="{{ request.GET.valor }}" placeholder="Ex: 100.00" style="max-width: 200px !important;">
+                                </div>
+                            </th>
+                            <th>
+                                <div class="filter-field">
+                                    <input type="text" id="observacao" name="observacao" value="{{ request.GET.observacao }}" placeholder="Ex: Nota" style="max-width: 200px !important;">
+                                </div>
+                            </th>
+                            <th>
+                                <div class="filter-field">
+                                    <input type="text" id="status" name="status" value="{{ request.GET.status }}" placeholder="Ex: Pendente" style="max-width: 200px !important;">
+                                </div>
+                            </th>
+                        </tr>
+                    </thead>
+        </form> <!-- FECHAMENTO SEGURO E LIMPO DO FORM -->
+
+                    <tbody>
+                        {% for item in page_obj %}
+                        <tr>
+                            <td class="row-index">{{ page_obj.start_index|add:forloop.counter0 }}</td>
+                            
+                            <td>
+                                <form method="POST" action="{% url 'concili' item.id %}" style="margin: 0;">
+                                    {% csrf_token %}
+                                    {% if item.conciliado == "Sim" %}
+                                        <button type="submit" class="btn-conci" style="display: inline-flex; align-items: center; gap: 6px;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-circle" viewBox="0 0 16 16" color="green">
+                                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                                                <path d="m10.97 4.97-.02.022-3.473 4.425-2.093-2.094a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05"/>
+                                            </svg>
+                                            Conciliado
+                                        </button>
+                                    {% else %}
+                                        {% if item.status == 'Pago' %}
+                                            <button type="submit" class="btn-notconci" style="display: inline-flex; align-items: center; gap: 6px;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-dash-circle" viewBox="0 0 16 16" color="red">
+                                                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                                                    <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8"/> 
+                                                </svg>
+                                                Não Conciliado
+                                            </button> 
+                                        {% else %}
+                                            <button type="button" class="btn-notconci" style="display: inline-flex; align-items: center; gap: 6px;" title="Clique para registrar o pagamento" onclick="alert('Atenção: para conciliar esse lançamento é necessário registrar o pagamento!')">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-dash-circle" viewBox="0 0 16 16" color="red">
+                                                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                                                    <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8"/> 
+                                                </svg>
+                                                Não Conciliado
+                                            </button> 
+                                        {% endif %}
+                                    {% endif %}
+                                </form>
+                            </td>
+                            
+                            <td class="text-center">
+                                {% if item.vencimento %}
+                                    {{ item.vencimento|date:"d/m/Y" }}
+                                {% else %}
+                                    <span style="color: #94a3b8;">-</span>
+                                {% endif %}
+                            </td>
+                            
+                            <td>{{ item.fornecedor }}</td>
+                            <td>{{ item.categoria }}</td>
+                            <td>{{ item.banco }}</td>
+                            <td class="text-center">{{ item.parcela }}</td>
+                            <td class="text-right" style="font-weight: 600;">R$ {{ item.valor }}</td>
+                            <td class="col-obs" title="{{ item.observacao }}">{{ item.observacao|default:"-" }}</td>
+                            
+                            <td>
+                                {% if item.status == "Pago" %}
+                                    <span class="status-badge status-pago">Pago</span>
+                                {% elif item.status == "Pendente" or item.status == "Em aberto" %}
+                                    <div style="display: inline-flex; align-items: center; gap: 8px;">
+                                        <span class="status-badge status-pendente">Pendente</span>
+                                        <a href="javascript:void(0);" onclick="abrirModal('{{ item.id }}', '{{ item.ultimo_pagamento|date:'Y-m-d' }}', '{{ item.juros }}')" title="Registrar Pagamento!" style="cursor: pointer; display: inline-flex;">
+                                            <!-- ÍCONE EM VERDE DINHEIRO PREMIUM FUNCIONANDO DE VERDADE -->
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="bi bi-cash-coin cash-green-premium" viewBox="0 0 16 16" style="overflow: visible;">
+                                                <path fill-rule="evenodd" d="M11 15a4 4 0 1 0 0-8 4 4 0 0 0 0 8m5-4a5 5 0 1 1-10 0 5 5 0 0 1 10 0"/>
+                                                <path d="M9.438 11.944c.047.596.518 1.06 1.363 1.116v.44h.375v-.443c.875-.061 1.386-.529 1.386-1.207 0-.618-.39-.936-1.09-1.1l-.296-.07v-1.2c.376.043.614.248.671.532h.658c-.047-.575-.54-1.024-1.329-1.073V8.5h-.375v.45c-.747.073-1.255.522-1.255 1.158 0 .562.378.92 1.007 1.066l.248.061v1.272c-.384-.058-.639-.27-.696-.563h-.668zm1.36-1.354c-.369-.085-.569-.26-.569-.522 0-.294.216-.514.572-.578v1.1zm.432.746c.449.104.655.272.655.569 0 .339-.257.571-.709.614v-1.195z"/>
+                                                <path d="M1 0a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h4.083q.088-.517.258-1H3a2 2 0 0 0-2-2V3a2 2 0 0 0 2-2h10a2 2 0 0 0 2 2v3.528c.38.34.717.728 1 1.154V1a1 1 0 0 0-1-1z"/>
+                                                <path d="M9.998 5.083 10 5a2 2 0 1 0-3.132 1.65 6 6 0 0 1 3.13-1.567"/>
+                                            </svg>
+                                        </a>
+                                    </div>
+                                {% elif item.status == "Atrasado" %}
+                                    <span class="status-badge status-atrasado">Atrasado</span>
+                                {% else %}
+                                    <span class="status-badge" style="background-color: #f1f5f9; color: #475569;">{{ item.status|default:"-" }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="10" style="text-align: center; color: #94a3b8; font-style: italic; padding: 30px;">
+                                Nenhum registro localizado no banco de dados.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        <!-- SEÇÃO DE PAGINAÇÃO MANTENDO OS PARÂMETROS ATIVOS -->
         <div class="pagination-section">
             <div>
                 Mostrando <b>{{ page_obj.start_index }}</b> a <b>{{ page_obj.end_index }}</b> de <b>{{ page_obj.paginator.count }}</b> registros
@@ -156,19 +204,19 @@
             {% if page_obj.has_other_pages %}
             <div class="page-buttons">
                 {% if page_obj.has_previous %}
-                    <a class="page-btn" href="?page={{ page_obj.previous_page_number }}{% if request.GET.data %}&data={{ request.GET.data }}{% endif %}{% if request.GET.fornecedor %}&fornecedor={{ request.GET.fornecedor }}{% endif %}{% if request.GET.categoria %}&categoria={{ request.GET.categoria }}{% endif %}">&laquo;</a>
+                    <a class="page-btn" href="?page={{ page_obj.previous_page_number }}{% if request.GET.conciliacao %}&conciliacao={{ request.GET.conciliacao }}{% endif %}{% if request.GET.data %}&data={{ request.GET.data }}{% endif %}{% if request.GET.fornecedor %}&fornecedor={{ request.GET.fornecedor }}{% endif %}{% if request.GET.categoria %}&categoria={{ request.GET.categoria }}{% endif %}{% if request.GET.banco %}&banco={{ request.GET.banco }}{% endif %}{% if request.GET.parcela %}&parcela={{ request.GET.parcela }}{% endif %}{% if request.GET.valor %}&valor={{ request.GET.valor }}{% endif %}{% if request.GET.observacao %}&observacao={{ request.GET.observacao }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">&laquo;</a>
                 {% endif %}
 
                 {% for num in page_obj.paginator.page_range %}
                     {% if page_obj.number == num %}
                         <span class="page-btn active">{{ num }}</span>
                     {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                        <a class="page-btn" href="?page={{ num }}{% if request.GET.data %}&data={{ request.GET.data }}{% endif %}{% if request.GET.fornecedor %}&fornecedor={{ request.GET.fornecedor }}{% endif %}{% if request.GET.categoria %}&categoria={{ request.GET.categoria }}{% endif %}">{{ num }}</a>
+                        <a class="page-btn" href="?page={{ num }}{% if request.GET.conciliacao %}&conciliacao={{ request.GET.conciliacao }}{% endif %}{% if request.GET.data %}&data={{ request.GET.data }}{% endif %}{% if request.GET.fornecedor %}&fornecedor={{ request.GET.fornecedor }}{% endif %}{% if request.GET.categoria %}&categoria={{ request.GET.categoria }}{% endif %}{% if request.GET.banco %}&banco={{ request.GET.banco }}{% endif %}{% if request.GET.parcela %}&parcela={{ request.GET.parcela }}{% endif %}{% if request.GET.valor %}&valor={{ request.GET.valor }}{% endif %}{% if request.GET.observacao %}&observacao={{ request.GET.observacao }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">{{ num }}</a>
                     {% endif %}
                 {% endfor %}
 
                 {% if page_obj.has_next %}
-                    <a class="page-btn" href="?page={{ page_obj.next_page_number }}{% if request.GET.data %}&data={{ request.GET.data }}{% endif %}{% if request.GET.fornecedor %}&fornecedor={{ request.GET.fornecedor }}{% endif %}{% if request.GET.categoria %}&categoria={{ request.GET.categoria }}{% endif %}">&raquo;</a>
+                    <a class="page-btn" href="?page={{ page_obj.next_page_number }}{% if request.GET.conciliacao %}&conciliacao={{ request.GET.conciliacao }}{% endif %}{% if request.GET.data %}&data={{ request.GET.data }}{% endif %}{% if request.GET.fornecedor %}&fornecedor={{ request.GET.fornecedor }}{% endif %}{% if request.GET.categoria %}&categoria={{ request.GET.categoria }}{% endif %}{% if request.GET.banco %}&banco={{ request.GET.banco }}{% endif %}{% if request.GET.parcela %}&parcela={{ request.GET.parcela }}{% endif %}{% if request.GET.valor %}&valor={{ request.GET.valor }}{% endif %}{% if request.GET.observacao %}&observacao={{ request.GET.observacao }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">&raquo;</a>
                 {% endif %}
             </div>
             {% endif %}
@@ -176,44 +224,44 @@
 
     </div>
 
-<div id="statusModal" class="modal-overlay">
-    <div class="modal-card">
-        <div class="modal-header">
-            <h3>Atualizar Pagamento</h3>
-            <button type="button" class="close-modal-btn" onclick="fecharModal()">&times;</button>
-        </div>
-        
-       <form id="statusForm">
-    {% csrf_token %}
-    <input type="hidden" id="modal-item-id" name="item_id">
-    
-    <input type="hidden" name="status" value="Pago">
-    
-    <div class="modal-body" style="display: flex; flex-direction: column; gap: 16px;">
-        <p style="font-size: 14px; color: #475569; margin-bottom: 8px;">
-            Confirmando o pagamento desta conta. Preencha os dados abaixo:
-        </p>
+    <!-- MODAL DE ATUALIZAÇÃO -->
+    <div id="statusModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Atualizar Pagamento</h3>
+                <button type="button" class="close-modal-btn" onclick="fecharModal()">&times;</button>
+            </div>
+            
+            <form id="statusForm">
+                {% csrf_token %}
+                <input type="hidden" id="modal-item-id" name="item_id">
+                <input type="hidden" name="status" value="Pago">
+                
+                <div class="modal-body" style="display: flex; flex-direction: column; gap: 16px;">
+                    <p style="font-size: 14px; color: #475569; margin-bottom: 8px;">
+                        Confirmando o pagamento desta conta. Preencha os dados abaixo:
+                    </p>
 
-        <div>
-            <label for="modal-data-input">Data do Pagamento</label>
-            <input type="date" id="modal-data-input" name="ultimo_pagamento" required style="width: 100%; height: 36px; padding: 0 8px; border-radius: 4px; border: 1px solid #cbd5e1; outline: none;">
-        </div>
+                    <div>
+                        <label for="modal-data-input">Data do Pagamento</label>
+                        <input type="date" id="modal-data-input" name="ultimo_pagamento" required style="width: 100%; height: 36px; padding: 0 8px; border-radius: 4px; border: 1px solid #cbd5e1; outline: none;">
+                    </div>
 
-        <div>
-            <label for="modal-juros-input">Juros (R$)</label>
-            <input type="number" step="0.01" min="0" id="modal-juros-input" name="juros" placeholder="0.00" style="width: 100%; height: 36px; padding: 0 8px; border-radius: 4px; border: 1px solid #cbd5e1; outline: none;">
+                    <div>
+                        <label for="modal-juros-input">Juros (R$)</label>
+                        <input type="number" step="0.01" min="0" id="modal-juros-input" name="juros" placeholder="0.00" style="width: 100%; height: 36px; padding: 0 8px; border-radius: 4px; border: 1px solid #cbd5e1; outline: none;">
+                    </div>
+                </div>
+                
+                <div class="modal-footer" style="margin-top: 20px;">
+                    <button type="button" class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
+                    <button type="submit" class="btn-salvar-modal" style="background-color: #16a34a;">Confirmar Pagamento</button>
+                </div>
+            </form>
         </div>
     </div>
-    
-    <div class="modal-footer" style="margin-top: 20px;">
-        <button type="button" class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
-        <button type="submit" class="btn-salvar-modal" style="background-color: #16a34a;">Confirmar Pagamento</button>
-    </div>
-</form>
-    </div>
-</div>
 
-<script src="{% static 'js/modal.js' %}"></script>
+    <script src="{% static 'js/modal.js' %}"></script>
 
 </body>
 </html>

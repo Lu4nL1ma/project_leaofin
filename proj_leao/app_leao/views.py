@@ -9,43 +9,73 @@ def home(request):
     # 1. Busca todos os registros do banco (a ordenação padrão [-vencimento] vem do Model Meta)
     queryset = ContaPagar.objects.all()
 
-    # 2. Captura os filtros que o usuário digitou na barra superior do HTML (via método GET)
-    filtro_fornecedor = request.GET.get('fornecedor')
-    filtro_categoria = request.GET.get('categoria')
-    filtro_data = request.GET.get('data')
+    # 2. Captura TODOS os filtros que o usuário digitou na barra superior (via método GET)
+    filtro_conciliacao = request.GET.get("conciliacao")
+    filtro_data = request.GET.get("data")
+    filtro_fornecedor = request.GET.get("fornecedor")
+    filtro_categoria = request.GET.get("categoria")
+    filtro_banco = request.GET.get("banco")
+    filtro_parcela = request.GET.get("parcela")
+    filtro_valor = request.GET.get("valor")
+    filtro_observacao = request.GET.get("observacao")
+    filtro_status = request.GET.get("status")
 
-    # 3. Aplica os filtros no ORM caso o usuário tenha digitado algo (o __icontains ignora maiúsculas/minúsculas)
+    # 3. Aplica os filtros no ORM caso tenham sido preenchidos
+
+    # Filtro: Conciliação
+    if filtro_conciliacao and filtro_conciliacao.strip():
+        queryset = queryset.filter(conciliado__icontains=filtro_conciliacao)
+
+    # Filtro: Fornecedor
     if filtro_fornecedor and filtro_fornecedor.strip():
         queryset = queryset.filter(fornecedor__icontains=filtro_fornecedor)
-        
+
+    # Filtro: Categoria
     if filtro_categoria and filtro_categoria.strip():
         queryset = queryset.filter(categoria__icontains=filtro_categoria)
 
-    # CORRIGIDO: Só tenta converter e filtrar a data se ela foi preenchida
+    # Filtro: Banco
+    if filtro_banco and filtro_banco.strip():
+        queryset = queryset.filter(banco__icontains=filtro_banco)
+
+    # Filtro: Parcela
+    if filtro_parcela and filtro_parcela.strip():
+        queryset = queryset.filter(parcela__icontains=filtro_parcela)
+
+    # Filtro: Valor
+    if filtro_valor and filtro_valor.strip():
+        queryset = queryset.filter(valor__icontains=filtro_valor)
+
+    # Filtro: Observação
+    if filtro_observacao and filtro_observacao.strip():
+        queryset = queryset.filter(observacao__icontains=filtro_observacao)
+
+    # Filtro: Status
+    if filtro_status and filtro_status.strip():
+        queryset = queryset.filter(status__icontains=filtro_status)
+
+    # Filtro Especial de Data: Converte DD/MM/AAAA para AAAA-MM-DD
     if filtro_data and filtro_data.strip():
         try:
-            data_objeto = datetime.strptime(filtro_data.strip(), '%d/%m/%Y')
-            filtro_data_formatada = data_objeto.strftime('%Y-%m-%d')
-            
-            # CORRIGIDO: Atribuído ao queryset e usando a variável correta
+            data_objeto = datetime.strptime(filtro_data.strip(), "%d/%m/%Y")
+            filtro_data_formatada = data_objeto.strftime("%Y-%m-%d")
+
             queryset = queryset.filter(vencimento=filtro_data_formatada)
         except ValueError:
-            # Caso o usuário digite uma data maluca (ex: 99/99/9999)
+            # Caso o usuário digite uma data inválida (ex: 99/99/9999)
             messages.error(request, "Formato de data inválido. Use DD/MM/AAAA.")
 
-    # 4. Configura a Paginação para exibir estritamente 20 linhas por página
+    # 4. Configura a Paginação para exibir estritamente 15 linhas por página
     paginator = Paginator(queryset, 15)
-    
+
     # Captura o número da página atual na URL (ex: ?page=2). Se não houver, assume a página 1.
-    page_number = request.GET.get('page')
+    page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
     # 5. Envia o 'page_obj' para o HTML. O seu template já está programado para ler essa variável!
-    context = {
-        'page_obj': page_obj
-    }
-    
-    return render(request, 'home.html', context)
+    context = {"page_obj": page_obj}
+
+    return render(request, "home.html", context)
 
 def form(request):
     if request.method == 'POST':
@@ -85,17 +115,26 @@ def conciliar(request, identi):
 
     # Busca a linha no SQLite
     conta = get_object_or_404(ContaPagar, id=identi)
-    
+
     # Altera o status baseado no que está atualmente no banco
     if conta.conciliado == "Sim":
         conta.conciliado = "Não"
     else:
         conta.conciliado = "Sim"
-        
+
     conta.save()
 
-    # Redireciona de volta para a função home (sua tabela)
-    return redirect('homes') # Use uma string com o nome que está no urls.py
+    # ==========================================================================
+    # CORREÇÃO DO PROBLEMA: MANTÉM OS FILTROS DA URL ATIVOS
+    # ==========================================================================
+    # Captura a URL exata (com todas as buscas GET) de onde o botão foi clicado
+    url_anterior = request.META.get("HTTP_REFERER")
+
+    if url_anterior:
+        return redirect(url_anterior)  # Recarrega a página mantendo a busca ativa
+
+    # Fallback de segurança (se o navegador não enviar o referer, usa a rota limpa)
+    return redirect("homes")
 
 def atualizar_status_json(request, identi):
     if request.method == 'POST':

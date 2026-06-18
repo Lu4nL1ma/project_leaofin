@@ -45,7 +45,7 @@ body {
 }
 
 /* ==========================================================================
-   Container Principal (Dashboard Card - MAIS LARGO)
+   Container Principal (Dashboard Card)
    ========================================================================== */
 .dashboard-card {
     background-color: #ffffff;
@@ -58,22 +58,32 @@ body {
 }
 
 /* ==========================================================================
-   1. Barra de Filtros Moderna
+   1. Barra de Filtros Geral (Alinhamentos Verticais e Redução de Padding)
    ========================================================================== */
 .filter-section {
     background-color: #ffffff;
     border-bottom: 1px solid #e2e8f0;
-    padding: 16px 20px;
+    padding: 12px 20px;        /* Padding reduzido para aproximar a tabela */
     display: flex;
-    gap: 20px;
-    align-items: flex-end; 
-    flex-wrap: wrap;
+    flex-direction: column;    /* Coloca os inputs na linha de cima e botões na de baixo */
+    gap: 12px;                 
+}
+
+/* Container que centraliza os botões de ação e filtro na parte inferior */
+.filter-actions {
+    display: flex;
+    justify-content: center;   /* Força centralização horizontal absoluta dos botões */
+    align-items: center;
+    gap: 10px;                 
+    width: 100%;
+    margin-top: 5px;
 }
 
 .filter-field {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    width: 100%;
 }
 
 .filter-field label {
@@ -84,16 +94,20 @@ body {
     color: #64748b;
 }
 
+/* Inputs de busca compactos e 100% centralizados de forma nativa */
 .filter-field input {
     border: 1px solid #cbd5e1;
-    padding: 6px 12px;
-    font-size: 13px;
+    padding: 4px 8px;          
+    font-size: 12px;           
     border-radius: 4px;
     outline: none;
     color: #1e293b;
     transition: all 0.2s;
-    min-width: 180px;
-    height: 33px; 
+    width: 100%;               
+    max-width: 130px;          
+    height: 28px;              
+    text-align: center !important; /* Resolve definitivamente o desalinhamento de Categoria e Valor */
+    margin: 0 auto;                
 }
 
 .filter-field input:focus {
@@ -105,7 +119,7 @@ body {
     background-color: #0f172a; 
     color: #ffffff;
     border: none;
-    padding: 0 20px;
+    padding: 0 16px;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
@@ -115,7 +129,7 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 33px; 
+    height: 30px;              /* Botões levemente mais baixos e elegantes */
     vertical-align: middle;
 }
 
@@ -123,7 +137,14 @@ body {
     background-color: #1e293b;
 }
 
-/* Estilo customizado para o botão azul do menu suspenso */
+/* Botão cinza de Limpar Filtros */
+.btn-clear {
+    background-color: #64748b;
+}
+.btn-clear:hover {
+    background-color: #475569;
+}
+
 .btn-dropdown {
     background-color: #0284c7;
 }
@@ -132,19 +153,18 @@ body {
 }
 
 /* ==========================================================================
-   ESTRUTURA DO MENU SUSPENSO (DROPDOWN)
+   Menu Suspenso (Dropdown de Ações)
    ========================================================================== */
 .dropdown {
     position: relative;
     display: inline-block;
-    margin-left: auto; /* Empurra o menu suspenso inteiramente para a direita */
+    /* Margin-left automático removido para permitir a centralização fluida no grid */
 }
 
-/* Caixa oculta que contém os links do menu */
 .dropdown-content {
     display: none;
     position: absolute;
-    right: 0; /* Alinha a caixinha do menu na direita para não vazar a tela */
+    right: 0; 
     background-color: #ffffff;
     min-width: 160px;
     box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.1);
@@ -155,7 +175,6 @@ body {
     overflow: hidden;
 }
 
-/* Links dentro da lista suspensa */
 .dropdown-content a {
     color: #334155;
     padding: 10px 16px;
@@ -166,19 +185,17 @@ body {
     transition: background-color 0.2s;
 }
 
-/* Efeito Hover nos itens da lista suspensa */
 .dropdown-content a:hover {
     background-color: #f1f5f9;
     color: #0284c7;
 }
 
-/* Mostra o menu suspenso ao passar o mouse sobre o container */
 .dropdown:hover .dropdown-content {
     display: block;
 }
 
 /* ==========================================================================
-   2. Área da Tabela (Estilo Híbrido Web/Excel)
+   2. Área da Tabela (Estilo Híbrido Grid 100% Centralizado)
    ========================================================================== */
 .table-responsive {
     overflow-x: auto;
@@ -189,6 +206,26 @@ body {
     border-collapse: collapse;
     width: 100%;
     font-size: 13px; 
+}
+
+.hybrid-table th {
+    background-color: #f1f5f9; 
+    color: #475569;
+    font-weight: 600;
+    border-bottom: 2px solid #cbd5e1;
+    border-right: 1px solid #e2e8f0;
+    padding: 10px 12px;
+    text-align: center !important; /* Força títulos no centro */
+}
+
+.hybrid-table td {
+    border-right: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 8px 12px;
+    white-space: nowrap;
+    background-color: #ffffff;
+    color: #334155;
+    text-align: center !important; /* Força dados no centro, incluindo a coluna Valor */
 }
 
 .hybrid-table td.row-index {
@@ -203,32 +240,10 @@ body {
     user-select: none;
 }
 
-.hybrid-table th {
-    background-color: #f1f5f9; 
-    color: #475569;
-    font-weight: 600;
-    border-bottom: 2px solid #cbd5e1;
-    border-right: 1px solid #e2e8f0;
-    padding: 10px 12px;
-    text-align: left;
-}
-
-.hybrid-table td {
-    border-right: 1px solid #e2e8f0;
-    border-bottom: 1px solid #e2e8f0;
-    padding: 8px 12px;
-    white-space: nowrap;
-    background-color: #ffffff;
-    color: #334155;
-}
-
 .hybrid-table th:last-child, 
 .hybrid-table td:last-child {
     border-right: none;
 }
-
-.text-center { text-align: center; }
-.text-right { text-align: right; }
 
 .col-obs {
     max-width: 200px;
@@ -246,6 +261,26 @@ body {
 .hybrid-table td:not(.row-index):hover {
     outline: 2px solid #38bdf8; 
     outline-offset: -2px;
+}
+
+/* ==========================================================================
+   Forçadores de Alinhamento e Sobrescritas Utilitárias
+   ========================================================================== */
+.text-center { 
+    text-align: center !important; 
+}
+.text-center .filter-field input { 
+    text-align: center !important; 
+}
+
+/* Ambas as classes agora centralizam os elementos para manter a simetria total da tabela */
+.text-right { 
+    text-align: center !important; 
+}
+.text-right .filter-field input,
+.hybrid-table td.text-right,
+.hybrid-table th.text-right { 
+    text-align: center !important; 
 }
 
 /* ==========================================================================
@@ -294,67 +329,56 @@ body {
     border-color: #cbd5e1;
 }
 
-
-/* Btn Conciliado */
+/* ==========================================================================
+   Botões de Ação da Tabela (Conciliação)
+   ========================================================================== */
 .btn-conci {
-    background-color: #f0fdf4; /* Verde bem clarinho e discreto de fundo */
-    color: #16a34a;            /* Texto em verde mais escuro e elegante */
-    border: 1px solid #bbf7d0; /* Borda sutil para dar acabamento */
-    padding: 4px 12px;         /* Espaçamento interno para dar formato de botão */
-    font-size: 12px;           /* Tamanho de fonte ideal para tabelas */
-    font-weight: 600;          /* Texto levemente em negrito */
-    border-radius: 20px;       /* Bordas arredondadas estilo pílula */
-    text-decoration: none;     /* Remove o sublinhado padrão de links */
-    
-    /* Alinhamento perfeito do texto com o SVG interno */
+    background-color: #f0fdf4; 
+    color: #16a34a;            
+    border: 1px solid #bbf7d0; 
+    padding: 4px 12px;         
+    font-size: 12px;           
+    font-weight: 600;          
+    border-radius: 20px;       
+    text-decoration: none;     
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    
     transition: all 0.2s ease;
-    cursor:pointer
+    cursor: pointer;
 }
 
-/* Efeito sutil ao passar o mouse por cima */
-.btn-conci {
-    background-color: #dcfce7; /* O fundo escurece de forma bem suave */
+.btn-conci:hover {
+    background-color: #dcfce7; 
     border-color: #86efac;
     color: #15803d;
 }
 
-
-/* ==========================================================================
-   Botão de Status: Não Conciliado (Vermelhinho Discreto)
-   ========================================================================== */
 .btn-notconci {
-    background-color: #fef2f2; /* Vermelho bem clarinho e discreto de fundo */
-    color: #dc2626;            /* Texto em vermelho mais escuro e elegante */
-    border: 1px solid #fecaca; /* Borda sutil para dar acabamento */
-    padding: 4px 12px;         /* Espaçamento interno idêntico ao outro botão */
+    background-color: #fef2f2; 
+    color: #dc2626;            
+    border: 1px solid #fecaca; 
+    padding: 4px 12px;         
     font-size: 12px;           
     font-weight: 600;          
-    border-radius: 20px;       /* Formato de pílula */
+    border-radius: 20px;       
     text-decoration: none;     
-    
-    /* Alinhamento perfeito do texto com o SVG interno */
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    
-    /* Mãozinha ao passar o mouse */
     cursor: pointer; 
-    
     transition: all 0.2s ease;
 }
 
-/* Efeito sutil ao passar o mouse por cima */
 .btn-notconci:hover {
-    background-color: #fee2e2; /* O fundo escurece de forma bem suave */
+    background-color: #fee2e2; 
     border-color: #fca5a5;
     color: #b91c1c;
 }
 
-/* Status Geral Base */
+/* ==========================================================================
+   Status Badges (Pílulas coloridas)
+   ========================================================================== */
 .status-badge {
     padding: 4px 12px;
     font-size: 12px;
@@ -364,30 +388,29 @@ body {
     text-align: center;
 }
 
-/* Pago (Verdinho) */
 .status-pago {
     background-color: #f0fdf4;
     color: #16a34a;
     border: 1px solid #bbf7d0;
 }
 
-/* Pendente/Em aberto (Amarelinho) */
 .status-pendente {
     background-color: #fefce8;
     color: #ca8a04;
     border: 1px solid #fef08a;
 }
 
-/* Atrasado (Vermelhinho) */
 .status-atrasado {
     background-color: #fef2f2;
     color: #dc2626;
     border: 1px solid #fecaca;
 }
 
-/* Fundo escurecido que cobre a tela toda */
+/* ==========================================================================
+   Estrutura e Animação do Modal
+   ========================================================================== */
 .modal-overlay {
-    display: none; /* Escondido por padrão */
+    display: none; 
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
     background-color: rgba(0, 0, 0, 0.4);
@@ -396,12 +419,10 @@ body {
     justify-content: center;
 }
 
-/* Exibe o modal quando a classe active for adicionada pelo JS */
 .modal-overlay.active {
     display: flex;
 }
 
-/* O cartão do modal em si */
 .modal-card {
     background: #ffffff;
     padding: 24px;
@@ -430,9 +451,10 @@ body {
 
 .modal-body label {
     display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 8px;
+    text-align: left; 
 }
 
-.modal-body select {
+.modal-body select, .modal-body input {
     width: 100%; height: 36px; padding: 0 8px; border-radius: 4px; border: 1px solid #cbd5e1; outline: none;
 }
 
@@ -451,4 +473,23 @@ body {
 @keyframes fadeIn {
     from { opacity: 0; transform: scale(0.95); }
     to { opacity: 1; transform: scale(1); }
+}
+
+/* ==========================================================================
+   Efeito Artístico Premium - Verde Dinheiro / Cédula Real
+   ========================================================================== */
+.cash-green-premium {
+    background: linear-gradient(135deg, #115e59 0%, #16a34a 50%, #22c55e 100%) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    fill: url(#verdeDinheiro) #16a34a; 
+    filter: drop-shadow(0px 1.5px 1px rgba(0, 0, 0, 0.4));
+    display: inline-block;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.cash-green-premium:hover {
+    transform: scale(1.2) translateY(-1.5px);
+    filter: drop-shadow(0px 3px 4px rgba(0, 0, 0, 0.5)) brightness(1.2);
 }
