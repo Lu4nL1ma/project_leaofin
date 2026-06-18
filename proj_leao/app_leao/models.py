@@ -1,6 +1,7 @@
 from django.db import models
 
 class ContaPagar(models.Model):
+    
     # Data de vencimento da fatura/conta
     vencimento = models.DateField(
         verbose_name="Data de Vencimento",

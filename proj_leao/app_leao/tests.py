@@ -1,59 +1,98 @@
-import os
-import sys
-import django
-from decimal import Decimal
+import sqlite3
 import pandas as pd
 
-# 1. CONFIGURAÇÃO DE AMBIENTE (Resolve o erro de ModuleNotFoundError)
-# Descobre a pasta raiz do projeto (onde fica o manage.py)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if BASE_DIR not in sys.path:
-    sys.path.append(BASE_DIR)
 
-# Alerta o Django sobre qual é o arquivo de configurações do seu projeto
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'proj_leao.settings')
-django.setup()
+def importar_excel_para_sqlite(
+    caminho_excel, nome_banco, nome_tabela, nome_aba=0
+):
+    conn = None
+    try:
+        # 1. Lê a planilha Excel usando o pandas
+        # nome_aba=0 pega a primeira aba por padrão.
+        df = pd.read_excel(caminho_excel, sheet_name=nome_aba)
 
-# SÓ AGORA podemos importar o Model com segurança
-from app_leao.models import ContaPagar
+        # Trata valores vazios/nulos do Excel para que o Python entenda como None (NULL no banco)
+        df = df.where(pd.notnull(df), None)
 
-# 2. CARREGAMENTO DOS DADOS
-caminho_excel = '/workspaces/project_leaofin/proj_leao/app_leao/bases_excel/up_fin.xlsx'
-df = pd.read_excel(caminho_excel)
+        # 2. Conecta ao banco de dados SQLite
+        conn = sqlite3.connect(nome_banco)
+        cursor = conn.cursor()
 
-# Tratamento para garantir que células vazias do Excel não virem 'NaN' que quebram o banco
-df = df.astype(object).where(pd.notnull(df), None)
+        # 3. Define todas as colunas que a tabela do banco possui hoje no Django
+        colunas = (
+            "(vencimento, fornecedor, categoria, banco, valor, parcela, "
+            "observacao, ultimo_pagamento, juros, status, conciliado)"
+        )
 
-# Ajuste da data para o formato aceito pelo Django DateField
-df['Vencimento'] = pd.to_datetime(df['Vencimento']).dt.date
+        # 11 placeholders correspondentes às 11 colunas
+        placeholders = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        query = f"INSERT INTO {nome_tabela} {colunas} VALUES {placeholders};"
 
-# 3. CONSTRUÇÃO DOS OBJETOS EM MEMÓRIA
-objetos_para_salvar = []
+        registros_inseridos = 0
 
-for row in df.itertuples(index=False):
-    # Usamos getattr(row, 'Nome', padrao) para evitar que o script quebre 
-    # caso a coluna 'Parcela' ou 'Observação' não existam na planilha Excel.
-    parcela_valor = getattr(row, 'Parcela', '1/1')
-    obs_valor = getattr(row, 'Observação', None)
-    
-    # Se a coluna de observação no Excel se chamar apenas "Observacao" (sem acento):
-    if obs_valor is None:
-        obs_valor = getattr(row, 'Observacao', None)
+        print("Iniciando a leitura das linhas e conversão de dados...")
 
-    conta = ContaPagar(
-        vencimento=row.Vencimento,    # Note a primeira letra Maiúscula!
-        fornecedor=row.Fornecedor,    # Note a primeira letra Maiúscula!
-        categoria=row.Categoria,      # Note a primeira letra Maiúscula!
-        banco=row.Banco,              # Note a primeira letra Maiúscula!
-        parcela=parcela_valor,
-        valor=Decimal(str(row.Valor)), # Note a primeira letra Maiúscula!
-        observacao=obs_valor
-    )
-    objetos_para_salvar.append(conta)
+        # 4. Percorre cada linha da planilha Excel de forma dinâmica
+        for index, linha in df.iterrows():
 
-# 4. SALVAMENTO EM LOTE (BULK CREATE)
-if objetos_para_salvar:
-    ContaPagar.objects.bulk_create(objetos_para_salvar)
-    print(f"Sucesso! {len(objetos_para_salvar)} registros incluídos no banco de dados.")
-else:
-    print("Nenhum registro encontrado para salvar.")
+            # --- AJUSTE E MÁSCARA DA DATA ---
+            # Converte '18/06/2026' (padrão BR) para um objeto de data e depois formata como '2026-06-18' (padrão SQLite/Django)
+            data_formatada = pd.to_datetime(linha["vencimento"], dayfirst=True)
+            vencimento = data_formatada.strftime("%Y-%m-%d")
+
+            # Demais dados dinâmicos vindos do Excel
+            fornecedor = linha["fornecedor"]
+            categoria = linha["categoria"]
+            banco = linha["banco"]
+            valor = float(linha["valor"])
+
+            # 5. Monta a tupla combinando os dados DINÂMICOS (Excel) com os DEFAULTS (Model)
+            dados_registro = (
+                vencimento,  # Dinâmico e Formatado (Ex: "2026-06-18")
+                fornecedor,  # Dinâmico (Excel)
+                categoria,  # Dinâmico (Excel)
+                banco,  # Dinâmico (Excel)
+                valor,  # Dinâmico (Excel)
+                "1/1",  # default do model: parcela
+                None,  # default do model: observacao (blank/null)
+                None,  # default do model: ultimo_pagamento (blank/null)
+                0.00,  # default do model: juros
+                "Pendente",  # default do model: status
+                "Não",  # default do model: conciliado
+            )
+
+            # Executa a inserção da linha atual na memória do cursor
+            cursor.execute(query, dados_registro)
+            registros_inseridos += 1
+
+        # 6. Salva todas as inserções de uma vez só no banco de dados (Garante performance)
+        conn.commit()
+
+        print("---" * 15)
+        print(
+            f"Sucesso! {registros_inseridos} registros importados com sucesso para a tabela '{nome_tabela}'."
+        )
+        print("---" * 15)
+
+    except Exception as e:
+        # Se der qualquer erro no processo, desfaz o que foi feito para não corromper o banco
+        if conn:
+            conn.rollback()
+        print(f"\n❌ Erro durante a importação: {e}")
+
+    finally:
+        if conn:
+            conn.close()
+            print("Conexão com o banco fechada.")
+
+
+# --- CONFIGURAÇÃO E EXECUÇÃO ---
+# 1. Coloque o nome/caminho correto do seu arquivo Excel aqui:
+CAMINHO_EXCEL = "proj_leao/app_leao/bases_excel/up_finish.xlsx"
+
+# 2. Seus caminhos de banco e tabela já configurados:
+MEU_BANCO = "/workspaces/project_leaofin/proj_leao/db.sqlite3"
+MINHA_TABELA = "app_leao_contapagar"
+
+# Executa a função
+importar_excel_para_sqlite(CAMINHO_EXCEL, MEU_BANCO, MINHA_TABELA)
