@@ -123,6 +123,7 @@ CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:8000',
     'https://*.github.dev',
     'https://*.githubdev.com',
-    'https://*.preview.app.github.dev'
+    'https://*.preview.app.github.dev',
+    'https://congenial-spoon-5g475prv5qx4h7479-8000.app.github.dev'
 ]
 

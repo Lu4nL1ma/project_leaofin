@@ -4,9 +4,24 @@ from django.core.paginator import Paginator
 from django.contrib import messages
 from datetime import datetime
 from django.http import JsonResponse
+from django.utils import timezone
 
 def home(request):
-    # 1. Busca todos os registros do banco (a ordenação padrão [-vencimento] vem do Model Meta)
+    # ==========================================================================
+    # 🔄 ATUALIZAÇÃO AUTOMÁTICA DE STATUS (CONTAS ATRASADAS)
+    # ==========================================================================
+    data_atual = timezone.localdate()
+
+    # Filtra contas vencidas (vencimento < hoje) que NÃO estão com status 'Pago'
+    # e atualiza todas de uma vez só no banco com o status "Atrasado"
+    ContaPagar.objects.filter(
+        vencimento__lt=data_atual,
+    ).exclude(
+        status__icontains="Pago"  # Ignora maiúsculas/minúsculas caso venha diferente do Excel
+    ).update(status="Atrasado")
+    # ==========================================================================
+
+    # 1. Busca todos os registros atualizados do banco
     queryset = ContaPagar.objects.all()
 
     # 2. Captura TODOS os filtros que o usuário digitou na barra superior (via método GET)
@@ -62,17 +77,16 @@ def home(request):
 
             queryset = queryset.filter(vencimento=filtro_data_formatada)
         except ValueError:
-            # Caso o usuário digite uma data inválida (ex: 99/99/9999)
             messages.error(request, "Formato de data inválido. Use DD/MM/AAAA.")
 
     # 4. Configura a Paginação para exibir estritamente 15 linhas por página
     paginator = Paginator(queryset, 15)
 
-    # Captura o número da página atual na URL (ex: ?page=2). Se não houver, assume a página 1.
+    # Captura o número da página atual na URL
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
-    # 5. Envia o 'page_obj' para o HTML. O seu template já está programado para ler essa variável!
+    # 5. Envia o 'page_obj' para o HTML
     context = {"page_obj": page_obj}
 
     return render(request, "home.html", context)
