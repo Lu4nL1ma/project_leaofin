@@ -125,6 +125,38 @@ def form(request):
     return render(request, 'form.html') # Ajuste o caminho do seu HTML
 
 
+def aba_conciliacao(request):
+    # 1. Busca TODAS as contas que já foram pagas (independente de estarem conciliadas ou não)
+    queryset = ContaPagar.objects.filter(status__icontains="Pago").order_by("-ultimo_pagamento")
+
+    # Filtro rápido de busca por fornecedor
+    filtro_fornecedor = request.GET.get("fornecedor")
+    if filtro_fornecedor and filtro_fornecedor.strip():
+        queryset = queryset.filter(fornecedor__icontains=filtro_fornecedor)
+
+    # 2. CÁLCULO DOS TOTAIS DO PAINEL DE AUDITORIA
+    # Soma o valor + juros das contas que já estão com conciliado = "Sim"
+    total_conciliado = queryset.filter(conciliado="Sim").aggregate(
+        total=Sum('valor') + Sum('juros')
+    )['total'] or 0.00
+
+    # Soma o valor + juros das contas que estão pagas, mas com conciliado diferente de "Sim"
+    total_pendente = queryset.exclude(conciliado="Sim").aggregate(
+        total=Sum('valor') + Sum('juros')
+    )['total'] or 0.00
+
+    # 3. PAGINAÇÃO
+    paginator = Paginator(queryset, 15)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'page_obj': page_obj,
+        'total_conciliado': total_conciliado,
+        'total_pendente': total_pendente,
+    }
+    return render(request, 'conciliacao.html', context)
+
 def conciliar(request, identi):
     # O Django já recebe o ID direto da URL
     print(f"ID recebido para conciliação: {identi}")

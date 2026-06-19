@@ -1,0 +1,171 @@
+{% load static %}
+{% load mascaras_financeiras %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histórico e Conciliação de Pagamentos</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        /* Painel de Indicadores Duplos */
+        .summary-container {
+            display: flex;
+            gap: 20px;
+            max-width: 95%;
+            margin: 0 auto 20px auto;
+        }
+        .summary-card-mini {
+            flex: 1;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            color: #ffffff;
+        }
+        .bg-conciliado { background: linear-gradient(135deg, #064e3b 0%, #059669 100%); }
+        
+        .bg-pendente-alerta { 
+            background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); 
+            box-shadow: 0 0 12px rgba(249, 115, 22, 0.2);
+        }
+        
+        .summary-card-mini h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9; margin-bottom: 4px; font-weight: 600; }
+        .summary-card-mini p { font-size: 24px; font-weight: 700; }
+        
+        /* ESTILO DO BOTÃO FORMATADO COMO BADGE DE ALERTA (VERSÃO AMPLIADA) */
+        .btn-badge-alerta {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 18px; /* Padding aumentado para dar mais corpo */
+            font-size: 13px;    /* Fonte levemente maior */
+            font-weight: 600;
+            border-radius: 9999px; 
+            background-color: #fff7ed; 
+            color: #ea580c; 
+            border: 1px solid #ffedd5;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            font-family: inherit;
+            white-space: nowrap;
+        }
+        
+        .btn-badge-alerta:hover {
+            background-color: #ffedd5;
+            border-color: #fed7aa;
+            transform: scale(1.03); /* Leve feedback de crescimento no hover */
+            box-shadow: 0 2px 4px rgba(234, 88, 12, 0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <header class="main-header">
+        <a href="{% url 'homes' %}" class="btn-filter btn-clear" style="position: absolute; left: 5px; height: 30px; padding: 0 12px;">&larr; Voltar</a>
+        <h1>Histórico de Conciliação</h1>
+    </header>
+
+    <div class="summary-container">
+        <div class="summary-card-mini bg-conciliado">
+            <h2>Total Conciliado (Histórico)</h2>
+            <p>{{ total_conciliado|moeda_br }}</p>
+        </div>
+        <div class="summary-card-mini bg-pendente-alerta">
+            <h2>Pendente de Conciliação</h2>
+            <p style="color: #ffffff;">{{ total_pendente|moeda_br }}</p>
+        </div>
+    </div>
+
+    <div class="dashboard-card">
+        
+        <form method="GET" class="filter-section">
+            <div style="display: flex; justify-content: center; align-items: center; gap: 10px; width: 100%;">
+                <div class="filter-field" style="max-width: 250px;">
+                    <input type="text" name="fornecedor" value="{{ request.GET.fornecedor }}" placeholder="Buscar fornecedor no histórico..." style="max-width: 100% !important; text-align: left !important;">
+                </div>
+                <button type="submit" class="btn-filter" style="background-color: #0284c7; height: 28px;">Pesquisar</button>
+                <a href="{{ request.path }}" class="btn-filter btn-clear" style="height: 28px;">Limpar</a>
+            </div>
+        </form>
+
+        <div class="table-responsive" style="margin-top: 5px;">
+            <table class="hybrid-table">
+                <thead>
+                    <tr>
+                        <th style="width: 45px; background-color: #f8fafc;">#</th>
+                        <th>Data Pagamento</th>
+                        <th>Fornecedor</th>
+                        <th>Banco</th>
+                        <th>Valor Original</th>
+                        <th>Juros</th>
+                        <th>Status C.B</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in page_obj %}
+                    <tr {% if item.conciliado == "Sim" %}style="background-color: #f8fafc;"{% endif %}>
+                        <td class="row-index">{{ page_obj.start_index|add:forloop.counter0 }}</td>
+                        
+                        <td style="color: #0284c7; font-weight: 600;">
+                            {{ item.ultimo_pagamento|date:"d/m/Y"|default:"-" }}
+                        </td>
+
+                        <td style="text-align: left !important; font-weight: 500;">{{ item.fornecedor }}</td>
+                        <td>{{ item.banco }}</td>
+                        <td>{{ item.valor|moeda_br }}</td>
+                        
+                        <td style="font-weight: 600; {% if item.juros > 0 %}color: #dc2626;{% endif %}">
+                            {{ item.juros|moeda_br|default:"R$ 0,00" }}
+                        </td>
+                        
+                        <!-- COLUNA DE STATUS COM BADGES AMPLIADOS -->
+                        <td>
+                            {% if item.conciliado == "Sim" %}
+                                <!-- SELO HISTÓRICO CONCLUÍDO (AMPLIADO NA MESMA ESCALA) -->
+                                <span class="status-badge" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 18px; background-color: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; border-radius: 9999px; font-size: 13px; font-weight: 600; white-space: nowrap;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>
+                                    Conciliado
+                                </span>
+                            {% else %}
+                                <!-- SELO INTERATIVO PENDENTE (AMPLIADO) -->
+                                <form method="POST" action="{% url 'concili' item.id %}" style="margin: 0; display: inline-flex;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-badge-alerta">
+                                        Conciliar Lançamento
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: #94a3b8; font-style: italic; padding: 40px;">
+                            Nenhum registro de pagamento encontrado.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- PAGINAÇÃO -->
+        <div class="pagination-section">
+            <div>
+                Mostrando <b>{{ page_obj.start_index }}</b> a <b>{{ page_obj.end_index }}</b> de <b>{{ page_obj.paginator.count }}</b> históricos de pagamentos
+            </div>
+            {% if page_obj.has_other_pages %}
+            <div class="page-buttons">
+                {% if page_obj.has_previous %}
+                    <a class="page-btn" href="?page={{ page_obj.previous_page_number }}{% if request.GET.fornecedor %}&fornecedor={{ request.GET.fornecedor }}{% endif %}">&laquo;</a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                    <a class="page-btn" href="?page={{ page_obj.next_page_number }}{% if request.GET.fornecedor %}&fornecedor={{ request.GET.fornecedor }}{% endif %}">&raquo;</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+</body>
+</html>

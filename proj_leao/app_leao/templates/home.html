@@ -37,7 +37,8 @@
                     </button>
                     <div class="dropdown-content">
                         <a href="{% url 'forms' %}">Novo Registro</a>
-                        <a href="{% url 'provisao' %}" style="border-top: 1px solid #e2e8f0; color: #0284c7;">Provisão de Pagamento</a>
+                        <a href="{% url 'provisao' %}">Provisão por Período</a>
+                        <a href="{% url 'aba_conciliacao' %}" style="border-top: 1px solid #e2e8f0; color: #16a34a;">Aba Conciliação</a>
                     </div>
                 </div>
             </div>
@@ -49,7 +50,6 @@
                         <!-- LINHA 1: TÍTULOS DA TABELA -->
                         <tr>
                             <th style="width: 45px; background-color: #f8fafc;"></th>
-                            <th>Conciliação</th> 
                             <th>Vencimento</th>
                             <th>Fornecedor</th>
                             <th>Categoria</th>
@@ -62,11 +62,7 @@
                         <!-- LINHA 2: INPUTS DE BUSCA INTEIRAMENTE CENTRALIZADOS -->
                         <tr>
                             <th style="width: 45px; background-color: #f8fafc;"></th>
-                            <th>
-                                <div class="filter-field">
-                                    <input type="text" id="concili" name="conciliacao" value="{{ request.GET.conciliacao }}" placeholder="Ex: Não" style="max-width: 200px !important;">
-                                </div> 
-                            </th> 
+      
                             <th>
                                 <div class="filter-field">
                                     <input type="text" id="data" name="data" value="{{ request.GET.data }}" placeholder="Ex: 18/06/2026" style="max-width: 200px !important;">
@@ -115,39 +111,7 @@
                         {% for item in page_obj %}
                         <tr>
                             <td class="row-index">{{ page_obj.start_index|add:forloop.counter0 }}</td>
-                            
-                            <td>
-                                <form method="POST" action="{% url 'concili' item.id %}" style="margin: 0;">
-                                    {% csrf_token %}
-                                    {% if item.conciliado == "Sim" %}
-                                        <button type="submit" class="btn-conci" style="display: inline-flex; align-items: center; gap: 6px;">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-circle" viewBox="0 0 16 16" color="green">
-                                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
-                                                <path d="m10.97 4.97-.02.022-3.473 4.425-2.093-2.094a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05"/>
-                                            </svg>
-                                            Conciliado
-                                        </button>
-                                    {% else %}
-                                        {% if item.status == 'Pago' %}
-                                            <button type="submit" class="btn-notconci" style="display: inline-flex; align-items: center; gap: 6px;">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-dash-circle" viewBox="0 0 16 16" color="red">
-                                                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
-                                                    <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8"/> 
-                                                </svg>
-                                                Não Conciliado
-                                            </button> 
-                                        {% else %}
-                                            <button type="button" class="btn-notconci" style="display: inline-flex; align-items: center; gap: 6px;" title="Clique para registrar o pagamento" onclick="alert('Atenção: para conciliar esse lançamento é necessário registrar o pagamento!')">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-dash-circle" viewBox="0 0 16 16" color="red">
-                                                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
-                                                    <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8"/> 
-                                                </svg>
-                                                Não Conciliado
-                                            </button> 
-                                        {% endif %}
-                                    {% endif %}
-                                </form>
-                            </td>
+                    
                             
                             <td class="text-center">
                                 {% if item.vencimento %}

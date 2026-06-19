@@ -1,6 +1,5 @@
 {% load static %}
 {% load mascaras_financeiras %}
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -9,7 +8,6 @@
     <title>Provisão de Contas a Pagar</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <style>
-        /* Estilos específicos para o painel de resumo financeiro */
         .summary-box {
             display: flex;
             justify-content: space-between;
@@ -22,11 +20,10 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
         .summary-info h2 { font-size: 14px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 5px; }
-        .summary-info p { font-size: 32px; font-weight: 700; color: #dc2626; /* <<< ALTERADO DE VERDE PARA VERMELHO */}
+        .summary-info p { font-size: 32px; font-weight: 700; color: #dc2626; }
         .summary-count { text-align: right; font-size: 14px; color: #cbd5e1; }
         .summary-count b { color: #38bdf8; }
         
-        /* Ajuste fino nos inputs de data do topo */
         .date-range-form { display: flex; align-items: center; gap: 15px; justify-content: center; width: 100%; margin-bottom: 5px; }
         .date-input-group { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #475569; }
         .date-input-group input[type="date"] { height: 30px; padding: 0 8px; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; font-size: 13px; color: #1e293b; }
@@ -43,7 +40,7 @@
         <div class="summary-box">
             <div class="summary-info">
                 <h2>Total Previsto para Pagamento</h2>
-                <p>R$ {{ total_valor|moeda_br}}</p>
+                <p>{{ total_valor|moeda_br }}</p>
             </div>
             <div class="summary-count">
                 <p>Período selecionado possui <b>{{ total_registros }}</b> lançamentos em aberto.</p>
@@ -91,14 +88,26 @@
                         <td>{{ item.categoria }}</td>
                         <td>{{ item.banco }}</td>
                         <td>{{ item.parcela }}</td>
-                        <td style="font-weight: 600; color: #0f172a;">R$ {{ item.valor|moeda_br }}</td>
+                        <td style="font-weight: 600; color: #0f172a;">{{ item.valor|moeda_br }}</td>
                         <td class="col-obs" data-title="{{ item.observacao }}">{{ item.observacao|default:"-" }}</td>
+                        
                         <td>
-                            {% if item.status == "Atrasado" %}
-                                <span class="status-badge status-atrasado">Atrasado</span>
-                            {% else %}
-                                <span class="status-badge status-pendente">{{ item.status }}</span>
-                            {% endif %}
+                            <div style="display: inline-flex; align-items: center; gap: 8px;">
+                                {% if item.status == "Atrasado" %}
+                                    <span class="status-badge status-atrasado">Atrasado</span>
+                                {% else %}
+                                    <span class="status-badge status-pendente">Pendente</span>
+                                {% endif %}
+                                
+                                <a href="javascript:void(0);" onclick="abrirModal('{{ item.id }}', '{{ item.ultimo_pagamento|date:'Y-m-d' }}', '{{ item.juros }}')" data-title="Registrar Pagamento!" style="cursor: pointer; display: inline-flex;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="bi bi-cash-coin cash-green-premium" viewBox="0 0 16 16" style="overflow: visible;">
+                                        <path fill-rule="evenodd" d="M11 15a4 4 0 1 0 0-8 4 4 0 0 0 0 8m5-4a5 5 0 1 1-10 0 5 5 0 0 1 10 0"/>
+                                        <path d="M9.438 11.944c.047.596.518 1.06 1.363 1.116v.44h.375v-.443c.875-.061 1.386-.529 1.386-1.207 0-.618-.39-.936-1.09-1.1 l-.296-.07v-1.2c.376.043.614.248.671.532h.658c-.047-.575-.54-1.024-1.329-1.073V8.5h-.375v.45c-.747.073-1.255.522-1.255 1.158 0 .562.378.92 1.007 1.066l.248.061v1.272c-.384-.058-.639-.27-.696-.563h-.668zm1.36-1.354c-.369-.085-.569-.26-.569-.522 0-.294.216-.514.572-.578v1.1zm.432.746c.449.104.655.272.655.569 0 .339-.257.571-.709.614v-1.195z"/>
+                                        <path d="M1 0a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h4.083q.088-.517.258-1H3a2 2 0 0 0-2-2V3a2 2 0 0 0 2-2h10a2 2 0 0 0 2 2v3.528c.38.34.717.728 1 1.154V1a1 1 0 0 0-1-1z"/>
+                                        <path d="M9.998 5.083 10 5a2 2 0 1 0-3.132 1.65 6 6 0 0 1 3.13-1.567"/>
+                                    </svg>
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     {% empty %}
@@ -112,6 +121,44 @@
             </table>
         </div>
     </div>
+
+    <div id="statusModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Atualizar Pagamento</h3>
+                <button type="button" class="close-modal-btn" onclick="fecharModal()">&times;</button>
+            </div>
+            
+            <form id="statusForm">
+                {% csrf_token %}
+                <input type="hidden" id="modal-item-id" name="item_id">
+                <input type="hidden" name="status" value="Pago">
+                
+                <div class="modal-body" style="display: flex; flex-direction: column; gap: 16px;">
+                    <p style="font-size: 14px; color: #475569; margin-bottom: 8px;">
+                        Confirmando o pagamento desta conta. Preencha os dados abaixo:
+                    </p>
+
+                    <div>
+                        <label for="modal-data-input">Data do Pagamento</label>
+                        <input type="date" id="modal-data-input" name="ultimo_pagamento" required>
+                    </div>
+
+                    <div>
+                        <label for="modal-juros-input">Juros (R$)</label>
+                        <input type="number" step="0.01" min="0" id="modal-juros-input" name="juros" placeholder="0.00">
+                    </div>
+                </div>
+                
+                <div class="modal-footer" style="margin-top: 20px;">
+                    <button type="button" class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
+                    <button type="submit" class="btn-salvar-modal" style="background-color: #16a34a;">Confirmar Pagamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{% static 'js/modal.js' %}"></script>
 
 </body>
 </html>
