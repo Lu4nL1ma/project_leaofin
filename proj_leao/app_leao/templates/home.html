@@ -1,4 +1,6 @@
 {% load static %}
+{% load mascaras_financeiras %}
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -35,6 +37,7 @@
                     </button>
                     <div class="dropdown-content">
                         <a href="{% url 'forms' %}">Novo Registro</a>
+                        <a href="{% url 'provisao' %}" style="border-top: 1px solid #e2e8f0; color: #0284c7;">Provisão de Pagamento</a>
                     </div>
                 </div>
             </div>
@@ -158,7 +161,7 @@
                             <td>{{ item.categoria }}</td>
                             <td>{{ item.banco }}</td>
                             <td class="text-center">{{ item.parcela }}</td>
-                            <td class="text-right" style="font-weight: 600;">R$ {{ item.valor }}</td>
+                            <td class="text-right" style="font-weight: 600;">R$ {{ item.valor|moeda_br }}</td>
                             <td class="col-obs" title="{{ item.observacao }}">{{ item.observacao|default:"-" }}</td>
                             
                             <td>

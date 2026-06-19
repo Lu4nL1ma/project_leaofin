@@ -2,9 +2,11 @@ from django.shortcuts import render, redirect, get_object_or_404
 from app_leao.models import ContaPagar
 from django.core.paginator import Paginator
 from django.contrib import messages
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.http import JsonResponse
 from django.utils import timezone
+from django.db.models import Sum
+
 
 def home(request):
     # ==========================================================================
@@ -176,3 +178,56 @@ def atualizar_status_json(request, identi):
         return JsonResponse({'success': True})
             
     return JsonResponse({'success': False}, status=400)
+
+
+
+def provisao_periodo(request):
+    # 1. Configura as datas padrão (Hoje até daqui a 30 dias) se o usuário não filtrar
+    hoje = timezone.localdate()
+    futuro_padrao = hoje + timedelta(days=30)
+
+    # Captura as datas vindas do formulário de período
+    data_inicio_str = request.GET.get("data_inicio")
+    data_fim_str = request.GET.get("data_fim")
+
+    # Tratamento e conversão das datas informadas
+    data_inicio = hoje
+    data_fim = futuro_padrao
+
+    if data_inicio_str:
+        try:
+            data_inicio = datetime.strptime(data_inicio_str, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+
+    if data_fim_str:
+        try:
+            data_fim = datetime.strptime(data_fim_str, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+
+    # 2. Filtra as contas que vencem dentro do período e que NÃO estão pagas
+    # (Buscamos o que 'vai ser pago', logo ignoramos o status 'Pago')
+# ... código anterior ...
+    contas_periodo = (
+        ContaPagar.objects.filter(vencimento__range=(data_inicio, data_fim))
+        .exclude(status__icontains="Pago")
+        .order_by("vencimento")  #  Corrigido! Ordena do mais próximo ao mais distante
+    )
+
+    # 3. MÁGICA DO ORM: Soma todos os valores do campo 'valor' das contas filtradas
+    # O resultado vem num dicionário tipo: {'valor__sum': 1500.50}
+    soma_total = contas_periodo.aggregate(Sum("valor"))["valor__sum"] or 0.00
+
+    # Contagem de quantos boletos existem no período
+    total_registros = contas_periodo.count()
+
+    context = {
+        "contas": contas_periodo,
+        "total_valor": soma_total,
+        "total_registros": total_registros,
+        "data_inicio": data_inicio.strftime("%Y-%m-%d"),
+        "data_fim": data_fim.strftime("%Y-%m-%d"),
+    }
+
+    return render(request, "provisao.html", context)

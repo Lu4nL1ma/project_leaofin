@@ -1,0 +1,117 @@
+{% load static %}
+{% load mascaras_financeiras %}
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Provisão de Contas a Pagar</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        /* Estilos específicos para o painel de resumo financeiro */
+        .summary-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #ffffff;
+            padding: 20px 30px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .summary-info h2 { font-size: 14px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 5px; }
+        .summary-info p { font-size: 32px; font-weight: 700; color: #dc2626; /* <<< ALTERADO DE VERDE PARA VERMELHO */}
+        .summary-count { text-align: right; font-size: 14px; color: #cbd5e1; }
+        .summary-count b { color: #38bdf8; }
+        
+        /* Ajuste fino nos inputs de data do topo */
+        .date-range-form { display: flex; align-items: center; gap: 15px; justify-content: center; width: 100%; margin-bottom: 5px; }
+        .date-input-group { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #475569; }
+        .date-input-group input[type="date"] { height: 30px; padding: 0 8px; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; font-size: 13px; color: #1e293b; }
+    </style>
+</head>
+<body>
+
+    <header class="main-header">
+        <a href="{% url 'homes' %}" class="btn-filter btn-clear" style="position: absolute; left: 5px; height: 30px; padding: 0 12px;">&larr; Voltar</a>
+        <h1>Provisão por Período</h1>
+    </header>
+
+    <div class="dashboard-card" style="max-width: 95%; background: transparent; box-shadow: none; border: none; margin-bottom: -10px;">
+        <div class="summary-box">
+            <div class="summary-info">
+                <h2>Total Previsto para Pagamento</h2>
+                <p>R$ {{ total_valor|moeda_br}}</p>
+            </div>
+            <div class="summary-count">
+                <p>Período selecionado possui <b>{{ total_registros }}</b> lançamentos em aberto.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-card">
+        
+        <form method="GET" class="filter-section">
+            <div class="date-range-form">
+                <div class="date-input-group">
+                    <label>De:</label>
+                    <input type="date" name="data_inicio" value="{{ data_inicio }}">
+                </div>
+                <div class="date-input-group">
+                    <label>Até:</label>
+                    <input type="date" name="data_fim" value="{{ data_fim }}">
+                </div>
+                <button type="submit" class="btn-filter" style="background-color: #0284c7; height: 30px;">Filtrar Período</button>
+            </div>
+        </form>
+
+        <div class="table-responsive" style="margin-top: 5px;">
+            <table class="hybrid-table">
+                <thead>
+                    <tr>
+                        <th style="width: 45px; background-color: #f8fafc;">#</th>
+                        <th>Vencimento</th>
+                        <th>Fornecedor</th>
+                        <th>Categoria</th>
+                        <th>Banco</th>
+                        <th>Parcela</th>
+                        <th>Valor</th>
+                        <th>Observação</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in contas %}
+                    <tr>
+                        <td class="row-index">{{ forloop.counter }}</td>
+                        <td>{{ item.vencimento|date:"d/m/Y" }}</td>
+                        <td>{{ item.fornecedor }}</td>
+                        <td>{{ item.categoria }}</td>
+                        <td>{{ item.banco }}</td>
+                        <td>{{ item.parcela }}</td>
+                        <td style="font-weight: 600; color: #0f172a;">R$ {{ item.valor|moeda_br }}</td>
+                        <td class="col-obs" data-title="{{ item.observacao }}">{{ item.observacao|default:"-" }}</td>
+                        <td>
+                            {% if item.status == "Atrasado" %}
+                                <span class="status-badge status-atrasado">Atrasado</span>
+                            {% else %}
+                                <span class="status-badge status-pendente">{{ item.status }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" style="text-align: center; color: #94a3b8; font-style: italic; padding: 4px 0; height: 100px; vertical-align: middle;">
+                            Nenhum lançamento em aberto encontrado para o período selecionado.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</body>
+</html>
