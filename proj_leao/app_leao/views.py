@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from app_leao.models import ContaPagar
+from app_leao.models import ContaPagar, Fornecedor
 from django.core.paginator import Paginator
 from django.contrib import messages
 from datetime import datetime, timedelta
@@ -263,3 +263,48 @@ def provisao_periodo(request):
     }
 
     return render(request, "provisao.html", context)
+
+
+def cadastrar_fornecedor(request):
+    if request.method == 'POST':
+        # Coleta os dados do formulário
+        razao_social = request.POST.get('razao_social')
+        nome_fantasia = request.POST.get('nome_fantasia')
+        cnpj = request.POST.get('cnpj')
+        email = request.POST.get('email')
+        telefone = request.POST.get('telefone')
+        logradouro = request.POST.get('logradouro')
+        cidade = request.POST.get('cidade')
+        estado = request.POST.get('estado')
+
+        # Validação simples (exemplo: CNPJ obrigatório e único)
+        if not razao_social or not cnpj:
+            messages.error(request, "Razão Social e CNPJ são obrigatórios.")
+            return render(request, 'cadastrar_fornecedor.html', {'dados': request.POST})
+
+        if Fornecedor.objects.filter(cnpj=cnpj).exists():
+            messages.error(request, "Este CNPJ já está cadastrado.")
+            return render(request, 'cadastrar_fornecedor.html', {'dados': request.POST})
+
+        try:
+            # Cria e salva o fornecedor
+            Fornecedor.objects.create(
+                razao_social=razao_social,
+                nome_fantasia=nome_fantasia,
+                cnpj=cnpj,
+                email=email,
+                telefone=telefone,
+                logradouro=logradouro,
+                cidade=cidade,
+                estado=estado
+            )
+            messages.success(request, f"Fornecedor '{nome_fantasia or razao_social}' cadastrado com sucesso!")
+            return redirect('homes') # Altere para a rota desejada após o sucesso
+            
+        except Exception as e:
+            messages.error(request, f"Erro ao cadastrar fornecedor: {e}")
+
+    return render(request, 'cadastrar_fornecedor.html')
+
+def saldo(request):
+    return render(request, "saldo.html")

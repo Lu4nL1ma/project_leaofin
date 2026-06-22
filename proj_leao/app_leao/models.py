@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import RegexValidator
 
 class ContaPagar(models.Model):
     
@@ -69,12 +70,21 @@ class ContaPagar(models.Model):
         default=0
     )
 
+    
+
     # Corrigido: Mudado para CharField (texto curto) e definido um valor padrão de texto
     status = models.CharField(
         max_length=30,
         verbose_name="Status",
         default="Pendente",
         blank=True
+    )
+
+    #banco ao qual foi pago
+    banco_pago = models.CharField(
+        max_length=100, 
+        verbose_name="Banco / Meio de Pagamento",
+        default='Definir'
     )
 
     # Corrigido: Fechado o parêntese e adicionado null/blank para aceitar dados antigos vazios
@@ -93,3 +103,71 @@ class ContaPagar(models.Model):
 
     def __str__(self):
         return f"{self.fornecedor} - {self.vencimento} - R$ {self.valor}"
+
+
+class Fornecedor(models.Model):
+    # Razão Social e Nome Fantasia
+    razao_social = models.CharField(
+        max_length=255, 
+        verbose_name="Razão Social"
+    )
+    nome_fantasia = models.CharField(
+        max_length=255, 
+        verbose_name="Nome Fantasia", 
+        blank=True, 
+        null=True
+    )
+    
+    # Documentação (Validador simples para formato de CNPJ: 00.000.000/0000-00)
+    cnpj_validator = RegexValidator(
+        regex=r'^\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}$',
+        message="O CNPJ deve estar no formato 00.000.000/0000-00"
+    )
+    cnpj = models.CharField(
+        max_length=18, 
+        unique=True, 
+        validators=[cnpj_validator], 
+        verbose_name="CNPJ"
+    )
+    
+    # Contato
+    email = models.EmailField(
+        max_length=254, 
+        verbose_name="E-mail", 
+        blank=True, 
+        null=True
+    )
+    telefone = models.CharField(
+        max_length=20, 
+        verbose_name="Telefone", 
+        blank=True, 
+        null=True
+    )
+    
+    # Endereço (Opcional, mas recomendado)
+    logradouro = models.CharField(max_length=255, verbose_name="Endereço", blank=True, null=True)
+    cidade = models.CharField(max_length=100, verbose_name="Cidade", blank=True, null=True)
+    estado = models.CharField(max_length=2, verbose_name="Estado (UF)", blank=True, null=True)
+    
+    # Controle Interno
+    ativo = models.BooleanField(
+        default=True, 
+        verbose_name="Ativo"
+    )
+    criado_em = models.DateTimeField(
+        auto_now_add=True, 
+        verbose_name="Criado em"
+    )
+    atualizado_em = models.DateTimeField(
+        auto_now=True, 
+        verbose_name="Atualizado em"
+    )
+
+    class Meta:
+        verbose_name = "Fornecedor"
+        verbose_name_plural = "Fornecedores"
+        ordering = ['razao_social']
+
+    def __str__(self):
+        # Retorna o nome fantasia se houver, senão a razão social
+        return self.nome_fantasia if self.nome_fantasia else self.razao_social
