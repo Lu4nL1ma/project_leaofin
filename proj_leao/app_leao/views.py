@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from app_leao.models import ContaPagar, Fornecedor
+from app_leao.models import ContaPagar, Fornecedor, BancoSaldo # 📦 IMPORTADO O NOVO MODEL DE BANCOS
 from django.core.paginator import Paginator
 from django.contrib import messages
 from datetime import datetime, timedelta
@@ -88,10 +88,17 @@ def home(request):
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
-    # 5. Envia o 'page_obj' para o HTML
-    context = {"page_obj": page_obj}
+    # 🔄 BUSCA OS BANCOS CADASTRADOS DINAMICAMENTE PARA O MODAL DE PAGAMENTO DA HOME
+    bancos_disponiveis = BancoSaldo.objects.all().order_by('nome')
+
+    # 5. Envia o 'page_obj' e 'bancos_disponiveis' para o HTML
+    context = {
+        "page_obj": page_obj,
+        "bancos_disponiveis": bancos_disponiveis
+    }
 
     return render(request, "home.html", context)
+
 
 def form(request):
     if request.method == 'POST':
@@ -107,7 +114,7 @@ def form(request):
         # Cria e salva o registro no banco de dados
         try:
             ContaPagar.objects.create(
-                vencimento=vencimento, # Ajuste os nomes dos campos de acordo com seu Model
+                vencimento=vencimento, 
                 valor=valor,
                 fornecedor=fornecedor,
                 categoria=categoria,
@@ -117,12 +124,15 @@ def form(request):
             )
             messages.success(request, "Lançamento cadastrado com sucesso!")
 
-            return redirect('homes') # Mude para a sua rota de sucesso
+            return redirect('homes') 
         except Exception as e:
             messages.error(request, f"Erro ao salvar: {e}")
 
-    # Se for GET, apenas renderiza a página do formulário
-    return render(request, 'form.html') # Ajuste o caminho do seu HTML
+    # 🔄 SE FOR GET, CARREGA OS BANCOS CASO SEU FORMULÁRIO DE CADASTRO TAMBÉM PRECISE DELES
+    bancos_disponiveis = BancoSaldo.objects.all().order_by('nome')
+    context = {"bancos_disponiveis": bancos_disponiveis}
+
+    return render(request, 'form.html', context) 
 
 
 def aba_conciliacao(request):
@@ -157,8 +167,8 @@ def aba_conciliacao(request):
     }
     return render(request, 'conciliacao.html', context)
 
+
 def conciliar(request, identi):
-    # O Django já recebe o ID direto da URL
     print(f"ID recebido para conciliação: {identi}")
 
     # Busca a linha no SQLite
@@ -172,17 +182,14 @@ def conciliar(request, identi):
 
     conta.save()
 
-    # ==========================================================================
-    # CORREÇÃO DO PROBLEMA: MANTÉM OS FILTROS DA URL ATIVOS
-    # ==========================================================================
     # Captura a URL exata (com todas as buscas GET) de onde o botão foi clicado
     url_anterior = request.META.get("HTTP_REFERER")
 
     if url_anterior:
-        return redirect(url_anterior)  # Recarrega a página mantendo a busca ativa
+        return redirect(url_anterior)  
 
-    # Fallback de segurança (se o navegador não enviar o referer, usa a rota limpa)
     return redirect("homes")
+
 
 def atualizar_status_json(request, identi):
     if request.method == 'POST':
@@ -192,25 +199,28 @@ def atualizar_status_json(request, identi):
         novo_status = request.POST.get('status')
         nova_data = request.POST.get('ultimo_pagamento')
         novo_juros = request.POST.get('juros')
+        nova_conta_origem = request.POST.get('conta_origem') # 🔄 RECOLHE A CONTA DO FORMULÁRIO DO MODAL
         
         # 2. Aplica as validações e atualiza o objeto
         if novo_status:
             conta.status = novo_status
             
-        if nova_data:  # Se houver data preenchida
+        if nova_data:  
             conta.ultimo_pagamento = nova_data
-        else:          # Se estiver vazia, salva como nulo (conforme seu model)
+        else:          
             conta.ultimo_pagamento = None
             
         if novo_juros:
             conta.juros = novo_juros
+            
+        if nova_conta_origem: # 🔄 INJETA A CONTA SELECIONADA COMO TEXTO COMUM NO MODEL
+            conta.conta_origem = nova_conta_origem
             
         # 3. Salva de vez no SQLite
         conta.save()
         return JsonResponse({'success': True})
             
     return JsonResponse({'success': False}, status=400)
-
 
 
 def provisao_periodo(request):
@@ -239,20 +249,20 @@ def provisao_periodo(request):
             pass
 
     # 2. Filtra as contas que vencem dentro do período e que NÃO estão pagas
-    # (Buscamos o que 'vai ser pago', logo ignoramos o status 'Pago')
-# ... código anterior ...
     contas_periodo = (
         ContaPagar.objects.filter(vencimento__range=(data_inicio, data_fim))
         .exclude(status__icontains="Pago")
-        .order_by("vencimento")  #  Corrigido! Ordena do mais próximo ao mais distante
+        .order_by("vencimento")  
     )
 
     # 3. MÁGICA DO ORM: Soma todos os valores do campo 'valor' das contas filtradas
-    # O resultado vem num dicionário tipo: {'valor__sum': 1500.50}
     soma_total = contas_periodo.aggregate(Sum("valor"))["valor__sum"] or 0.00
 
     # Contagem de quantos boletos existem no período
     total_registros = contas_periodo.count()
+
+    # 🔄 BUSCA OS BANCOS CADASTRADOS DINAMICAMENTE PARA O MODAL DE PAGAMENTO DA PROVISÃO
+    bancos_disponiveis = BancoSaldo.objects.all().order_by('nome')
 
     context = {
         "contas": contas_periodo,
@@ -260,6 +270,7 @@ def provisao_periodo(request):
         "total_registros": total_registros,
         "data_inicio": data_inicio.strftime("%Y-%m-%d"),
         "data_fim": data_fim.strftime("%Y-%m-%d"),
+        "bancos_disponiveis": bancos_disponiveis # 🔄 ENVIADO PARA O TEMPLATE DA PROVISÃO
     }
 
     return render(request, "provisao.html", context)
@@ -277,7 +288,7 @@ def cadastrar_fornecedor(request):
         cidade = request.POST.get('cidade')
         estado = request.POST.get('estado')
 
-        # Validação simples (exemplo: CNPJ obrigatório e único)
+        # Validação simples
         if not razao_social or not cnpj:
             messages.error(request, "Razão Social e CNPJ são obrigatórios.")
             return render(request, 'cadastrar_fornecedor.html', {'dados': request.POST})
@@ -299,12 +310,13 @@ def cadastrar_fornecedor(request):
                 estado=estado
             )
             messages.success(request, f"Fornecedor '{nome_fantasia or razao_social}' cadastrado com sucesso!")
-            return redirect('homes') # Altere para a rota desejada após o sucesso
+            return redirect('homes') 
             
         except Exception as e:
             messages.error(request, f"Erro ao cadastrar fornecedor: {e}")
 
     return render(request, 'cadastrar_fornecedor.html')
+
 
 def saldo(request):
     return render(request, "saldo.html")

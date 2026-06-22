@@ -1,47 +1,74 @@
 from django.contrib import admin
-from app_leao.models import ContaPagar
+from .models import ContaPagar, Fornecedor, BancoSaldo
 
 @admin.register(ContaPagar)
 class ContaPagarAdmin(admin.ModelAdmin):
-    # 1. Colunas que vão aparecer na listagem geral (estilo tabela)
+    # Colunas que vão aparecer na listagem geral
     list_display = (
         'vencimento', 
         'fornecedor', 
         'categoria', 
         'banco', 
+        'parcela', 
         'valor', 
         'status', 
         'conciliado'
     )
     
-    # 2. Transforma esses campos em links clicáveis para abrir a edição
-    list_display_links = ('vencimento', 'fornecedor')
+    # Filtros que vão aparecer na barra lateral direita
+    list_filter = ('status', 'conciliado', 'vencimento', 'categoria', 'banco')
     
-    # 3. Cria uma barra de pesquisa para buscar rapidamente por texto
-    search_fields = ('fornecedor', 'categoria', 'observacao', 'banco')
+    # Campos que permitem busca digitável
+    search_fields = ('fornecedor', 'categoria', 'observacao')
     
-    # 4. Filtros práticos na lateral direita (as novas colunas ajudam muito aqui)
-    list_filter = ('status', 'conciliado', 'vencimento', 'banco', 'categoria')
-    
-    # 5. Permite editar o Status e a Conciliação direto na tabela, sem ter que abrir o registro (opcional, muito produtivo!)
+    # Permite editar o status e a conciliação direto na lista, sem abrir o registro
     list_editable = ('status', 'conciliado')
     
-    # 6. Paginação: exibe 20 contas por página
-    list_per_page = 20
-    
-    # 7. Organiza a estrutura da tela de formulário/edição do Admin em blocos
+    # Organização visual dos campos dentro do formulário de edição
     fieldsets = (
-        ('Informações Principais', {
-            'fields': ('vencimento', 'valor', 'fornecedor')
+        ('Informações Básicas', {
+            'fields': ('fornecedor', 'categoria', 'valor', 'parcela')
         }),
-        ('Classificação e Meio de Pagamento', {
-            'fields': ('categoria', 'banco', 'parcela')
+        ('Planejamento e Vencimento', {
+            'fields': ('vencimento', 'banco')
         }),
-        ('Controlo de Pagamento e Fluxo', {
-            'fields': ('ultimo_pagamento', 'status', 'conciliado')
+        ('Pagamento e Conciliação', {
+            'fields': ('ultimo_pagamento', 'juros', 'banco_pago', 'status', 'conciliado')
         }),
         ('Informações Adicionais', {
             'fields': ('observacao',),
-            'classes': ('collapse',), # Deixa o bloco de texto de observações recolhido por padrão
+            'classes': ('collapse',),  # Minimiza este bloco por padrão
         }),
     )
+
+
+@admin.register(Fornecedor)
+class FornecedorAdmin(admin.ModelAdmin):
+    list_display = ('razao_social', 'nome_fantasia', 'cnpj', 'telefone', 'ativo')
+    list_filter = ('ativo', 'estado', 'criado_em')
+    search_fields = ('razao_social', 'nome_fantasia', 'cnpj', 'email')
+    list_editable = ('ativo',)
+    
+    # Define quais campos não podem ser editados manualmente (são automáticos)
+    readonly_fields = ('criado_em', 'atualizado_em')
+    
+    fieldsets = (
+        ('Dados Cadastrais', {
+            'fields': ('razao_social', 'nome_fantasia', 'cnpj', 'ativo')
+        }),
+        ('Contato', {
+            'fields': ('email', 'telefone')
+        }),
+        ('Endereço', {
+            'fields': ('logradouro', 'cidade', 'estado')
+        }),
+        ('Datas de Controle', {
+            'fields': ('criado_em', 'atualizado_em'),
+        }),
+    )
+
+
+@admin.register(BancoSaldo)
+class BancoSaldoAdmin(admin.ModelAdmin):
+    list_display = ('nome',)
+    search_fields = ('nome',)

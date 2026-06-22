@@ -99,7 +99,7 @@
                                     <span class="status-badge status-pendente">Pendente</span>
                                 {% endif %}
                                 
-                                <a href="javascript:void(0);" onclick="abrirModal('{{ item.id }}', '{{ item.ultimo_pagamento|date:'Y-m-d' }}', '{{ item.juros }}')" data-title="Registrar Pagamento!" style="cursor: pointer; display: inline-flex;">
+                                <a href="javascript:void(0);" onclick="abrirModal('{{ item.id }}', '{{ item.ultimo_pagamento|date:'Y-m-d' }}', '{{ item.juros }}', '{{ item.fornecedor|escapejs }}', '{{ item.vencimento|date:'Y-m-d' }}', '{{ item.valor|moeda_br }}')" data-title="Registrar Pagamento!" style="cursor: pointer; display: inline-flex;">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="bi bi-cash-coin cash-green-premium" viewBox="0 0 16 16" style="overflow: visible;">
                                         <path fill-rule="evenodd" d="M11 15a4 4 0 1 0 0-8 4 4 0 0 0 0 8m5-4a5 5 0 1 1-10 0 5 5 0 0 1 10 0"/>
                                         <path d="M9.438 11.944c.047.596.518 1.06 1.363 1.116v.44h.375v-.443c.875-.061 1.386-.529 1.386-1.207 0-.618-.39-.936-1.09-1.1 l-.296-.07v-1.2c.376.043.614.248.671.532h.658c-.047-.575-.54-1.024-1.329-1.073V8.5h-.375v.45c-.747.073-1.255.522-1.255 1.158 0 .562.378.92 1.007 1.066l.248.061v1.272c-.384-.058-.639-.27-.696-.563h-.668zm1.36-1.354c-.369-.085-.569-.26-.569-.522 0-.294.216-.514.572-.578v1.1zm.432.746c.449.104.655.272.655.569 0 .339-.257.571-.709.614v-1.195z"/>
@@ -122,41 +122,7 @@
         </div>
     </div>
 
-    <div id="statusModal" class="modal-overlay">
-        <div class="modal-card">
-            <div class="modal-header">
-                <h3>Atualizar Pagamento</h3>
-                <button type="button" class="close-modal-btn" onclick="fecharModal()">&times;</button>
-            </div>
-            
-            <form id="statusForm">
-                {% csrf_token %}
-                <input type="hidden" id="modal-item-id" name="item_id">
-                <input type="hidden" name="status" value="Pago">
-                
-                <div class="modal-body" style="display: flex; flex-direction: column; gap: 16px;">
-                    <p style="font-size: 14px; color: #475569; margin-bottom: 8px;">
-                        Confirmando o pagamento desta conta. Preencha os dados abaixo:
-                    </p>
-
-                    <div>
-                        <label for="modal-data-input">Data do Pagamento</label>
-                        <input type="date" id="modal-data-input" name="ultimo_pagamento" required>
-                    </div>
-
-                    <div>
-                        <label for="modal-juros-input">Juros (R$)</label>
-                        <input type="number" step="0.01" min="0" id="modal-juros-input" name="juros" placeholder="0.00">
-                    </div>
-                </div>
-                
-                <div class="modal-footer" style="margin-top: 20px;">
-                    <button type="button" class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
-                    <button type="submit" class="btn-salvar-modal" style="background-color: #16a34a;">Confirmar Pagamento</button>
-                </div>
-            </form>
-        </div>
-    </div>
+        {% include 'modal_pagamento.html' %}
 
     <script src="{% static 'js/modal.js' %}"></script>
 

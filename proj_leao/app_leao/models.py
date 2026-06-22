@@ -70,7 +70,6 @@ class ContaPagar(models.Model):
         default=0
     )
 
-    
 
     # Corrigido: Mudado para CharField (texto curto) e definido um valor padrão de texto
     status = models.CharField(
@@ -171,3 +170,16 @@ class Fornecedor(models.Model):
     def __str__(self):
         # Retorna o nome fantasia se houver, senão a razão social
         return self.nome_fantasia if self.nome_fantasia else self.razao_social
+
+
+
+# NOVA TABELA INDEPENDENTE PARA VOCÊ CADASTRAR OS BANCOS QUE QUISER
+class BancoSaldo(models.Model):
+    nome = models.CharField(max_length=50, unique=True, verbose_name="Nome do Banco/Conta")
+    
+    def __str__(self):
+        return self.nome
+        
+    class Meta:
+        verbose_name = "Conta com Saldo"
+        verbose_name_plural = "Contas com Saldo"
