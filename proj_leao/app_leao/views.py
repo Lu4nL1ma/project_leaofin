@@ -6,6 +6,10 @@ from datetime import datetime, timedelta
 from django.http import JsonResponse
 from django.utils import timezone
 from django.db.models import Sum
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt # Caso precise para o Fetch
+from ofxparse import OfxParser
+
 
 
 def home(request):
@@ -99,6 +103,52 @@ def home(request):
 
     return render(request, "home.html", context)
 
+def processar_ofx_ajax(request):
+    if request.method == "POST" and request.FILES.get("arquivo_ofx"):
+        banco_destino = request.POST.get("banco_destino")
+        ofx_file = request.FILES.get("arquivo_ofx")
+        
+        try:
+            # 1. Faz o Parser do arquivo OFX real
+            ofx = OfxParser.parse(ofx_file)
+            transacoes_ofx = []
+            
+            for tx in ofx.account.statement.transactions:
+                transacoes_ofx.append({
+                    'data': tx.date.strftime('%d/%m/%Y'),
+                    'descricao': tx.memo,
+                    'valor': float(abs(tx.amount)) # Garante valor positivo para bater com o sistema
+                })
+            
+            # 2. Busca no banco as contas Pagas pelo banco selecionado e NÃO conciliadas
+            contas_sistema = ContaPagar.objects.filter(
+                status__icontains="Pago",
+                banco=banco_destino, # Filtra direto pelo banco vindo do Modal 1
+                conciliado="Não"
+            ).order_by('-ultimo_pagamento')
+            
+            # Formata as contas para o formato JSON
+            contas_pendentes = []
+            for conta in contas_sistema:
+                contas_pendentes.append({
+                    'id': conta.id,
+                    'fornecedor': conta.fornecedor,
+                    'valor': float(conta.valor),
+                    'data_pagamento': conta.ultimo_pagamento.strftime('%d/%m/%Y') if conta.ultimo_pagamento else '-'
+                })
+                
+            # Devolve as duas listas prontas para o JavaScript
+            return JsonResponse({
+                'success': True,
+                'banco': banco_destino,
+                'transacoes_ofx': transacoes_ofx,
+                'contas_pendentes': contas_pendentes
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+            
+    return JsonResponse({'success': False, 'error': 'Método inválido ou arquivo não enviado.'})
 
 def form(request):
     if request.method == 'POST':
@@ -136,6 +186,27 @@ def form(request):
 
 
 def aba_conciliacao(request):
+    # ==========================================================================
+    # 🏦 RECEBIMENTO E VALIDAÇÃO DO OFX (VIA MODAL)
+    # ==========================================================================
+    if request.method == "POST":
+        banco_destino = request.POST.get("banco_destino")
+        arquivo_ofx = request.FILES.get("arquivo_ofx")
+        
+        if banco_destino and arquivo_ofx:
+            try:
+                # 🛠️ POST PRONTO: Aqui você vai injetar a lógica de leitura do OFX
+                # usando as variáveis 'banco_destino' e 'arquivo_ofx'
+                
+                messages.success(request, f"Arquivo enviado com sucesso para validação no banco: {banco_destino}!")
+            except Exception as e:
+                messages.error(request, f"Erro ao processar o arquivo: {e}")
+                
+            return redirect('aba_conciliacao')
+
+    # ==========================================================================
+    # 📊 LEITURA E FILTROS DA TELA (SEU CÓDIGO ORIGINAL)
+    # ==========================================================================
     # 1. Busca TODAS as contas que já foram pagas (independente de estarem conciliadas ou não)
     queryset = ContaPagar.objects.filter(status__icontains="Pago").order_by("-ultimo_pagamento")
 
@@ -145,12 +216,10 @@ def aba_conciliacao(request):
         queryset = queryset.filter(fornecedor__icontains=filtro_fornecedor)
 
     # 2. CÁLCULO DOS TOTAIS DO PAINEL DE AUDITORIA
-    # Soma o valor + juros das contas que já estão com conciliado = "Sim"
     total_conciliado = queryset.filter(conciliado="Sim").aggregate(
         total=Sum('valor') + Sum('juros')
     )['total'] or 0.00
 
-    # Soma o valor + juros das contas que estão pagas, mas com conciliado diferente de "Sim"
     total_pendente = queryset.exclude(conciliado="Sim").aggregate(
         total=Sum('valor') + Sum('juros')
     )['total'] or 0.00
@@ -160,13 +229,16 @@ def aba_conciliacao(request):
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
+    # 🔄 4. CARREGA OS BANCOS CADASTRADOS PARA ALIMENTAR O SEU MODAL OFX
+    bancos_disponiveis = BancoSaldo.objects.all().order_by('nome')
+
     context = {
         'page_obj': page_obj,
         'total_conciliado': total_conciliado,
         'total_pendente': total_pendente,
+        'bancos_disponiveis': bancos_disponiveis, # << INJETADO NO CONTEXTO
     }
     return render(request, 'conciliacao.html', context)
-
 
 def conciliar(request, identi):
     print(f"ID recebido para conciliação: {identi}")
