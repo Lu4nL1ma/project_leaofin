@@ -32,14 +32,14 @@
         .summary-card-mini h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9; margin-bottom: 4px; font-weight: 600; }
         .summary-card-mini p { font-size: 24px; font-weight: 700; }
         
-        /* ESTILO DO BOTÃO FORMATADO COMO BADGE DE ALERTA (VERSÃO AMPLIADA) */
+        /* ESTILO DO BOTÃO FORMATADO COMO BADGE DE ALERTA */
         .btn-badge-alerta {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;          /* AJUSTE: Adicionado espaçamento perfeito entre o SVG e o texto */
-            padding: 8px 18px; /* Padding aumentado para dar mais corpo */
-            font-size: 13px;    /* Fonte levemente maior */
+            gap: 6px;          
+            padding: 8px 18px; 
+            font-size: 13px;    
             font-weight: 600;
             border-radius: 9999px; 
             background-color: #fff7ed; 
@@ -54,8 +54,140 @@
         .btn-badge-alerta:hover {
             background-color: #ffedd5;
             border-color: #fed7aa;
-            transform: scale(1.03); /* Leve feedback de crescimento no hover */
+            transform: scale(1.03); 
             box-shadow: 0 2px 4px rgba(234, 88, 12, 0.1);
+        }
+
+        /* CONTAINER GLOBAL DE AÇÕES SUPERIORES */
+        .top-actions-container {
+            display: flex;
+            justify-content: center; 
+            align-items: center;     
+            width: 100%;
+            position: relative;      
+            margin-bottom: 15px;
+            min-height: 36px;        
+        }
+
+        /* FORMULÁRIO DE FILTRO (CENTRALIZADO HORIZONTALMENTE) */
+        .top-actions-container .filter-section {
+            margin: 0 auto !important; 
+            padding: 0; 
+            width: auto; 
+            box-shadow: none; 
+            background: transparent;
+        }
+
+        /* BOTÃO IMPORTAR OFX */
+        .btn-ofx-trigger {
+            position: absolute;
+            right: 0;                
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background-color: #1e293b;
+            color: #ffffff;
+            padding: 0 14px;
+            height: 30px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid #334155;
+            transition: background 0.2s;
+        }
+        .btn-ofx-trigger:hover {
+            background-color: #334155;
+        }
+
+        /* Alertas de Feedback do Django */
+        .django-messages {
+            max-width: 95%;
+            margin: 10px auto;
+            list-style: none;
+            padding: 0;
+        }
+        .django-messages li {
+            padding: 12px 20px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .django-messages li.success { background-color: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+        .django-messages li.warning { background-color: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+        .django-messages li.error { background-color: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+
+        /* CENTRALIZAÇÃO COMPLETA E ABSOLUTA DA TABELA PRINCIPAL */
+        .hybrid-table th, 
+        .hybrid-table td, 
+        .hybrid-table tr td {
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+
+        /* 🔲 ARQUITETURA DO NOVO MODAL DE ASSOCIAÇÃO (MUITO MAIOR) */
+        .modal-grande {
+            max-width: 90% !important;
+            width: 90% !important;
+        }
+
+        /* Split layout para o cruzamento de dados */
+        .conciliacao-split-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 10px;
+        }
+
+        .split-column {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 15px;
+            max-height: 450px;
+            overflow-y: auto;
+        }
+
+        .split-column h4 {
+            margin-top: 0;
+            margin-bottom: 12px;
+            color: #334155;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #cbd5e1;
+            padding-bottom: 6px;
+        }
+
+        /* Mini tabela interna para visualização dos itens dentro do modal */
+        .mini-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .mini-table th {
+            background-color: #e2e8f0;
+            color: #475569;
+            padding: 8px;
+            font-weight: 600;
+        }
+        .mini-table td {
+            padding: 8px;
+            border-bottom: 1px solid #e2e8f0;
+            background-color: #ffffff;
+        }
+
+        /* Customização dos selects internos para conciliação manual */
+        .select-match {
+            width: 100%;
+            height: 28px;
+            font-size: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            outline: none;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -65,6 +197,14 @@
         <a href="{% url 'homes' %}" class="btn-filter btn-clear" style="position: absolute; left: 5px; height: 30px; padding: 0 12px;">&larr; Voltar</a>
         <h1>Histórico de Conciliação</h1>
     </header>
+
+    {% if messages %}
+    <ul class="django-messages">
+        {% for message in messages %}
+        <li class="{{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
 
     <div class="summary-container">
         <div class="summary-card-mini bg-conciliado">
@@ -79,15 +219,27 @@
 
     <div class="dashboard-card">
         
-        <form method="GET" class="filter-section">
-            <div style="display: flex; justify-content: center; align-items: center; gap: 10px; width: 100%;">
-                <div class="filter-field" style="max-width: 250px;">
-                    <input type="text" name="fornecedor" value="{{ request.GET.fornecedor }}" placeholder="Buscar fornecedor no histórico..." style="max-width: 100% !important; text-align: left !important;">
+        <div class="top-actions-container">
+            
+            <form method="GET" class="filter-section">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="filter-field" style="width: 250px; margin: 0;">
+                        <input type="text" name="fornecedor" value="{{ request.GET.fornecedor }}" placeholder="Buscar fornecedor no histórico..." style="max-width: 100% !important; text-align: center !important; height: 28px;">
+                    </div>
+                    <button type="submit" class="btn-filter" style="background-color: #0284c7; height: 30px;">Pesquisar</button>
+                    <a href="{{ request.path }}" class="btn-filter btn-clear" style="height: 30px; display: inline-flex; align-items: center;">Limpar</a>
                 </div>
-                <button type="submit" class="btn-filter" style="background-color: #0284c7; height: 28px;">Pesquisar</button>
-                <a href="{{ request.path }}" class="btn-filter btn-clear" style="height: 28px;">Limpar</a>
-            </div>
-        </form>
+            </form>
+
+            <button type="button" class="btn-ofx-trigger" onclick="abrirModalOfx()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-file-earmark-arrow-up" viewBox="0 0 16 16">
+                    <path d="M8.5 11.5a.5.5 0 0 1-1 0V7.707L6.354 8.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 7.707z"/>
+                    <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
+                </svg>
+                Importar OFX
+            </button>
+
+        </div>
 
         <div class="table-responsive" style="margin-top: 5px;">
             <table class="hybrid-table">
@@ -111,7 +263,7 @@
                             {{ item.ultimo_pagamento|date:"d/m/Y"|default:"-" }}
                         </td>
 
-                        <td style="text-align: left !important; font-weight: 500;">{{ item.fornecedor }}</td>
+                        <td style="font-weight: 500;">{{ item.fornecedor }}</td>
                         <td>{{ item.banco }}</td>
                         <td>{{ item.valor|moeda_br }}</td>
                         
@@ -119,16 +271,13 @@
                             {{ item.juros|moeda_br|default:"R$ 0,00" }}
                         </td>
                         
-                        <!-- COLUNA DE STATUS COM BADGES AMPLIADOS -->
                         <td>
                             {% if item.conciliado == "Sim" %}
-                                <!-- SELO HISTÓRICO CONCLUÍDO (AMPLIADO NA MESMA ESCALA) -->
                                 <span class="status-badge" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 18px; background-color: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; border-radius: 9999px; font-size: 13px; font-weight: 600; white-space: nowrap;">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>
                                     Conciliado
                                 </span>
                             {% else %}
-                                <!-- SELO INTERATIVO PENDENTE (AMPLIADO) -->
                                 <form method="POST" action="{% url 'concili' item.id %}" style="margin: 0; display: inline-flex;">
                                     {% csrf_token %}
                                     <button type="submit" class="btn-badge-alerta">
@@ -153,7 +302,6 @@
             </table>
         </div>
 
-        <!-- PAGINAÇÃO -->
         <div class="pagination-section">
             <div>
                 Mostrando <b>{{ page_obj.start_index }}</b> a <b>{{ page_obj.end_index }}</b> de <b>{{ page_obj.paginator.count }}</b> históricos de pagamentos
@@ -171,6 +319,151 @@
         </div>
 
     </div>
+
+    <div id="ofxModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Validação de Importação Bancária</h3>
+                <button type="button" class="close-modal-btn" onclick="fecharModalOfx()">&times;</button>
+            </div>
+            
+            <form id="ofxForm" onsubmit="simularTransicaoModal(event)">
+                <div class="modal-body" style="display: flex; flex-direction: column; gap: 16px;">
+                    <p style="font-size: 14px; color: #475569; margin-bottom: 4px;">
+                        Selecione a qual banco pertence o arquivo OFX para que o sistema possa validar e iniciar a conciliação.
+                    </p>
+
+                    <div>
+                        <label for="ofxBanco" style="display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 6px;">Banco do Extrato:</label>
+                        <select id="ofxBanco" name="banco_destino" required style="width: 100%; height: 36px; padding: 0 8px; border: 1px solid #cbd5e1; border-radius: 4px; background-color: white; font-size: 14px; color: #1e293b; outline: none; box-sizing: border-box; cursor: pointer;">
+                            <option value="" disabled selected>Selecione o banco de destino...</option>
+                            {% for banco in bancos_disponiveis %}
+                                <option value="{{ banco.nome }}">{{ banco.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="ofxFile" style="display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 6px;">Arquivo Extrato (.OFX):</label>
+                        <input type="file" id="ofxFile" name="arquivo_ofx" accept=".ofx" required style="width: 100%; font-size: 14px; color: #475569;">
+                    </div>
+                </div>
+                
+                <div class="modal-footer" style="margin-top: 20px;">
+                    <button type="button" class="btn-cancelar" onclick="fecharModalOfx()">Cancelar</button>
+                    <button type="submit" class="btn-salvar-modal" style="background-color: #1e293b;">Carregar Lançamentos</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <div id="ofxConciliacaoModal" class="modal-overlay">
+        <div class="modal-card modal-grande">
+            <div class="modal-header">
+                <h3>Painel de Associação Automática e Manual (OFX)</h3>
+                <button type="button" class="close-modal-btn" onclick="fecharModalGrande()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">
+                    Abaixo estão listadas as saídas identificadas no arquivo de extrato bancário à esquerda. Associe cada uma delas à respectiva conta paga pendente no sistema à direita.
+                </p>
+
+                <div class="conciliacao-split-container">
+                    
+                    <div class="split-column">
+                        <h4>1. Lançamentos do Extrato Bancário</h4>
+                        <table class="mini-table">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Descrição / Memo</th>
+                                    <th>Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>22/06/2026</td>
+                                    <td style="text-align: left; font-weight: 500;">Tarifa Bancária PJ</td>
+                                    <td style="color: #dc2626; font-weight: 600;">R$ 45,00</td>
+                                </tr>
+                                <tr>
+                                    <td>23/06/2026</td>
+                                    <td style="text-align: left; font-weight: 500;">PGTO FORNECEDOR ABC LTDA</td>
+                                    <td style="color: #dc2626; font-weight: 600;">R$ 1.250,00</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="split-column">
+                        <h4>2. Vincular com Conta do Sistema</h4>
+                        <table class="mini-table">
+                            <thead>
+                                <tr>
+                                    <th>Ação de Associação / Match</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <select class="select-match">
+                                            <option value="">-- Selecione uma conta para associar --</option>
+                                            <option value="1">Tarifas Diversas - Banco do Brasil (R$ 45,00 - 20/06)</option>
+                                            <option value="2">Fornecedor Simulação S/A (R$ 120,00 - 15/06)</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <select class="select-match">
+                                            <option value="" disabled selected>✨ Sugestão encontrada: ABC Distribuidora (R$ 1.250,00 - 23/06)</option>
+                                            <option value="3">ABC Distribuidora (R$ 1.250,00 - 23/06)</option>
+                                            <option value="4">Outra Conta Paga Pendente...</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+            
+            <div class="modal-footer" style="margin-top: 20px;">
+                <button type="button" class="btn-cancelar" onclick="fecharModalGrande()">Cancelar</button>
+                <button type="button" class="btn-salvar-modal" style="background-color: #16a34a;" onclick="alert('Simulação: Lançamentos conciliados com sucesso!')">Confirmar e Conciliar Lançamentos</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // Modal 1 (Pequeno)
+        function abrirModalOfx() {
+            document.getElementById('ofxModal').classList.add('active');
+        }
+        function fecharModalOfx() {
+            document.getElementById('ofxModal').classList.remove('active');
+            document.getElementById('ofxForm').reset();
+        }
+
+        // Modal 2 (Grande)
+        function abrirModalGrande() {
+            document.getElementById('ofxConciliacaoModal').classList.add('active');
+        }
+        function fecharModalGrande() {
+            document.getElementById('ofxConciliacaoModal').classList.remove('active');
+        }
+
+        // Simulação do comportamento de transição entre telas
+        function simularTransicaoModal(event) {
+            event.preventDefault(); // Impede o reload da página
+            fecharModalOfx();       // Fecha o formulário inicial
+            abrirModalGrande();     // Transiciona abrindo a tela de conciliação
+        }
+    </script>
 
 </body>
 </html>
