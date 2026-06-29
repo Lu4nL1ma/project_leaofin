@@ -8,9 +8,35 @@ from django.utils import timezone
 from django.db.models import Sum
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt # Caso precise para o Fetch
-from ofxparse import OfxParser
+from django.contrib.auth import authenticate, login, logout
 
 
+def tela_login(request):
+    # Se o usuário já estiver logado e tentar acessar o login, manda direto para a home
+    if request.user.is_authenticated:
+        return redirect('homes')
+    return render(request, 'login.html')
+
+def login_usuario(request):
+    if request.method == "POST":
+        usuario_post = request.POST.get("username")
+        senha_post = request.POST.get("password")
+        
+        # O Django valida a senha criptografada de forma nativa aqui:
+        user = authenticate(request, username=usuario_post, password=senha_post)
+        
+        if user is not None:
+            login(request, user) # Inicia a sessão salva no navegador
+            return redirect('homes') # Direciona para a sua página inicial
+        else:
+            messages.error(request, "Usuário ou senha incorretos. Tente novamente.")
+            return redirect('tela_login')
+            
+    return redirect('tela_login')
+
+def logout_usuario(request):
+    logout(request) # Destrói a sessão do navegador
+    return redirect('tela_login')
 
 def home(request):
     # ==========================================================================

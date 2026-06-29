@@ -14,7 +14,7 @@ SECRET_KEY = "django-insecure-1yu)y4t&4^omt66o$*4wk6$zf@^3qr$@-cnpovl4e4c9kpzp3!
 DEBUG = True
 
 # Permite rodar localmente e também dentro do ambiente do GitHub Codespaces
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.github.dev']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.github.dev', 'LeaoAzul.pythonanywhere.com']
 
 
 # Application definition
