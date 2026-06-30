@@ -5,10 +5,12 @@ from django.contrib import messages
 from datetime import datetime, timedelta
 from django.http import JsonResponse
 from django.utils import timezone
-from django.db.models import Sum
+from django.db.models import Sum, Q, Count
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt # Caso precise para o Fetch
 from django.contrib.auth import authenticate, login, logout
+import json
+from datetime import date
 
 
 def tela_login(request):
@@ -418,3 +420,51 @@ def cadastrar_fornecedor(request):
 
 def saldo(request):
     return render(request, "saldo.html")
+
+
+def dashboard_leve(request):
+    hoje = date.today()
+    
+    # 1. Agregação de alta performance para os Cards Estratégicos
+    metricas = ContaPagar.objects.aggregate(
+        # Card 1: Juros absolutos jogados no lixo (Vazamento de Caixa)
+        total_juros=Sum('juros', filter=Q(status="Pago")),
+        
+        # Card 2: Acurácia de Conciliação (Pagos e Conciliados / Total de Pagos)
+        total_pagos=Count('id', filter=Q(status="Pago")),
+        pagos_conciliados=Count('id', filter=Q(status="Pago", conciliado="Sim")),
+        
+        # Card 3: Volume Crítico (Contas pendentes que já passaram do vencimento)
+        volume_atrasado=Sum('valor', filter=Q(status="Pendente", vencimento__lt=hoje))
+    )
+    
+    # Tratamento de valores nulos e cálculo de porcentagem
+    total_juros = metricas['total_juros'] or 0
+    volume_atrasado = metricas['volume_atrasado'] or 0
+    
+    total_pagos = metricas['total_pagos'] or 1
+    taxa_conciliacao = (metricas['pagos_conciliados'] / total_pagos) * 100
+
+    # 2. Dados do Gráfico: Desperdício de juros acumulado por Categoria
+    dados_grafico = ContaPagar.objects.filter(status="Pago", juros__gt=0) \
+        .values('categoria') \
+        .annotate(total_juros=Sum('juros')) \
+        .order_by('-total_juros')
+
+    categorias = [item['categoria'] for item in dados_grafico]
+    juros_valores = [float(item['total_juros']) for item in dados_grafico]
+
+    # 3. Lista Operacional: Top 5 maiores contas pagas que ainda NÃO foram conciliadas
+    pendentes_conciliacao = ContaPagar.objects.filter(status="Pago", conciliado="Não") \
+        .order_by('-valor')[:5]
+
+    context = {
+        'total_juros': total_juros,
+        'taxa_conciliacao': round(taxa_conciliacao, 1),
+        'volume_atrasado': volume_atrasado,
+        'categorias_json': json.dumps(categorias),
+        'juros_json': json.dumps(juros_valores),
+        'pendentes_conciliacao': pendentes_conciliacao,
+    }
+    
+    return render(request, 'dashboard.html', context)
