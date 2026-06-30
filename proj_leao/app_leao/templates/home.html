@@ -45,6 +45,61 @@
             border-color: #ef4444;
             box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
         }
+
+        /* 🎯 Layout de 3 colunas para garantir centralização real dos filtros */
+        .filter-actions {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        /* Elemento fantasma na esquerda para equilibrar o grid e centralizar o meio */
+        .filter-actions::before {
+            content: "";
+            display: block;
+        }
+
+        /* Bloco central onde ficam os botões de busca */
+        .search-buttons-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        /* Empurra o container do dropdown de Ações fixo na extrema direita */
+        .filter-actions .dropdown {
+            justify-self: end;
+            position: relative;
+            display: inline-block;
+        }
+
+        /* ⏳ Ajustes robustos para o dropdown não fechar acidentalmente */
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background-color: #ffffff;
+            min-width: 220px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.1);
+            z-index: 100;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+            margin-top: 2px; /* Reduz a distância física para o mouse não "cair" no vazio */
+        }
+
+        /* O truque: exibe o menu e aplica transição suave para evitar fechamento precoce */
+        .dropdown:hover .dropdown-content {
+            display: block;
+            animation: fadeInDropdown 0.15s ease-in-out forwards;
+        }
+
+        @keyframes fadeInDropdown {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
@@ -68,13 +123,17 @@
         <!-- O FORMULÁRIO ENGLOBA A SEÇÃO DE FILTROS E A TABELA DE INPUTS -->
         <form method="GET" class="filter-section">
 
-            <!-- BLOCO DE BOTÕES CENTRALIZADOS NA PARTE DE BAIXO DOS INPUTS -->
+            <!-- BLOCO DE BOTÕES CENTRALIZADOS E DISTRIBUÍDOS -->
             <div class="filter-actions">
-                <button type="submit" class="btn-filter">Aplicar Filtros</button>
                 
-                <!-- BOTÃO LIMPAR FILTROS (Reseta a URL limpando as buscas) -->
-                <a href="{{ request.path }}" class="btn-filter btn-clear">Limpar Filtros</a>
+                <!-- Grupo Central de Botões de Pesquisa -->
+                <div class="search-buttons-group">
+                    <button type="submit" class="btn-filter">Aplicar Filtros</button>
+                    <!-- BOTÃO LIMPAR FILTROS (Reseta a URL limpando as buscas) -->
+                    <a href="{{ request.path }}" class="btn-filter btn-clear">Limpar Filtros</a>
+                </div>
 
+                <!-- DROPDOWN DE AÇÕES TOTALMENTE ALINHADO À DIREITA -->
                 <div class="dropdown">
                     <button type="button" class="btn-filter btn-dropdown">
                         Ações
