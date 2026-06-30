@@ -10,7 +10,9 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt # Caso precise para o Fetch
 from django.contrib.auth import authenticate, login, logout
 import json
+import io
 from datetime import date
+from ofxtools.Parser import OFXTree
 
 
 def tela_login(request):
@@ -134,29 +136,56 @@ def home(request):
 def processar_ofx_ajax(request):
     if request.method == "POST" and request.FILES.get("arquivo_ofx"):
         banco_destino = request.POST.get("banco_destino")
-        ofx_file = request.FILES.get("arquivo_ofx")
+        arquivo_ofx = request.FILES.get("arquivo_ofx")
         
         try:
-            # 1. Faz o Parser do arquivo OFX real
-            ofx = OfxParser.parse(ofx_file)
+            # 1. Lê o arquivo vindo do upload diretamente como texto (string)
+            conteudo = arquivo_ofx.read().decode("utf-8", errors="ignore")
+            
+            # 2. Aplica a sua correção cirúrgica para datas zeradas que quebram o parser
+            conteudo_corrigido = conteudo.replace("00000000000000", "20000101120000")
+            conteudo_corrigido = conteudo_corrigido.replace("00000000", "20000101")
+            
+            # 3. Transforma o texto corrigido de volta em bytes na memória usando BytesIO
+            conteudo_em_bytes = conteudo_corrigido.encode("utf-8")
+            arquivo_virtual_binario = io.BytesIO(conteudo_em_bytes)
+            
+            # 4. Faz o parse do arquivo limpo na memória
+            parser = OFXTree()
+            parser.parse(arquivo_virtual_binario) 
+            obj = parser.convert()
+            
+            # 5. Acessa o primeiro extrato de forma direta (igual à sua função inspiradora)
+            extrato = obj.statements[0]
+            transacoes = extrato.banktranlist
+            
             transacoes_ofx = []
             
-            for tx in ofx.account.statement.transactions:
+            # 6. Percorre as transações e extrai os campos no padrão que o JS espera
+            for tx in transacoes:
+                # O valor no OFX pode vir negativo para saídas, usamos abs() para o cruzamento com o sistema
+                valor_ajustado = float(abs(tx.trnamt))
+                
+                # Converte a data para o formato brasileiro DD/MM/AAAA
+                data_formatada = tx.dtposted.strftime('%d/%m/%Y') if tx.dtposted else '-'
+                
                 transacoes_ofx.append({
-                    'data': tx.date.strftime('%d/%m/%Y'),
-                    'descricao': tx.memo,
-                    'valor': float(abs(tx.amount)) # Garante valor positivo para bater com o sistema
+                    'data': data_formatada,
+                    'descricao': tx.memo if tx.memo else (tx.name or "Transação sem descrição"),
+                    'valor': valor_ajustado
                 })
             
-            # 2. Busca no banco as contas Pagas pelo banco selecionado e NÃO conciliadas
+            # ==================================================================
+            # 🏦 BUSCA NO BANCO DE DADOS (CONTAS DO SISTEMA)
+            # ==================================================================
+            # Busca as contas Pagas pelo banco selecionado no Modal 1 e que NÃO foram conciliadas
             contas_sistema = ContaPagar.objects.filter(
-                status__icontains="Pago",
-                banco=banco_destino, # Filtra direto pelo banco vindo do Modal 1
-                conciliado="Não"
-            ).order_by('-ultimo_pagamento')
+            status__icontains="Pago",
+            conciliado="Não"
+        ).order_by('-ultimo_pagamento')
             
-            # Formata as contas para o formato JSON
             contas_pendentes = []
+
             for conta in contas_sistema:
                 contas_pendentes.append({
                     'id': conta.id,
@@ -165,7 +194,7 @@ def processar_ofx_ajax(request):
                     'data_pagamento': conta.ultimo_pagamento.strftime('%d/%m/%Y') if conta.ultimo_pagamento else '-'
                 })
                 
-            # Devolve as duas listas prontas para o JavaScript
+            # Retorna o JSON de sucesso completo para o frontend
             return JsonResponse({
                 'success': True,
                 'banco': banco_destino,
@@ -174,7 +203,8 @@ def processar_ofx_ajax(request):
             })
             
         except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
+            # Captura o erro amigavelmente e joga no alert do cliente
+            return JsonResponse({'success': False, 'error': f"Erro ao processar OFX: {str(e)}"})
             
     return JsonResponse({'success': False, 'error': 'Método inválido ou arquivo não enviado.'})
 

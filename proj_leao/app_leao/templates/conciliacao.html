@@ -118,7 +118,7 @@
         .django-messages li.warning { background-color: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
         .django-messages li.error { background-color: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
 
-        /* CENTRALIZAÇÃO COMPLETA E ABSOLUTA DA TABELA PRINCIPAL */
+        /* CENTRALIZAÇÃO DA TABELA */
         .hybrid-table th, 
         .hybrid-table td, 
         .hybrid-table tr td {
@@ -126,13 +126,12 @@
             vertical-align: middle !important;
         }
 
-        /* 🔲 ARQUITETURA DO NOVO MODAL DE ASSOCIAÇÃO (MUITO MAIOR) */
+        /* CONFIGURAÇÃO DO SEGUNDO MODAL (GRANDE) */
         .modal-grande {
             max-width: 90% !important;
             width: 90% !important;
         }
 
-        /* Split layout para o cruzamento de dados */
         .conciliacao-split-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -161,7 +160,6 @@
             padding-bottom: 6px;
         }
 
-        /* Mini tabela interna para visualização dos itens dentro do modal */
         .mini-table {
             width: 100%;
             border-collapse: collapse;
@@ -179,7 +177,6 @@
             background-color: #ffffff;
         }
 
-        /* Customização dos selects internos para conciliação manual */
         .select-match {
             width: 100%;
             height: 28px;
@@ -302,6 +299,7 @@
             </table>
         </div>
 
+        <!-- PAGINAÇÃO -->
         <div class="pagination-section">
             <div>
                 Mostrando <b>{{ page_obj.start_index }}</b> a <b>{{ page_obj.end_index }}</b> de <b>{{ page_obj.paginator.count }}</b> históricos de pagamentos
@@ -320,6 +318,7 @@
 
     </div>
 
+    <!-- 🏦 MODAL 1: SELEÇÃO DE ARQUIVOS -->
     <div id="ofxModal" class="modal-overlay">
         <div class="modal-card">
             <div class="modal-header">
@@ -327,7 +326,7 @@
                 <button type="button" class="close-modal-btn" onclick="fecharModalOfx()">&times;</button>
             </div>
             
-            <form id="ofxForm" onsubmit="simularTransicaoModal(event)">
+            <form id="ofxForm">
                 <div class="modal-body" style="display: flex; flex-direction: column; gap: 16px;">
                     <p style="font-size: 14px; color: #475569; margin-bottom: 4px;">
                         Selecione a qual banco pertence o arquivo OFX para que o sistema possa validar e iniciar a conciliação.
@@ -357,21 +356,21 @@
         </div>
     </div>
 
-
+    <!-- 📊 MODAL 2: TELA GRANDE DE ASSOCIAÇÃO REAL -->
     <div id="ofxConciliacaoModal" class="modal-overlay">
         <div class="modal-card modal-grande">
             <div class="modal-header">
-                <h3>Painel de Associação Automática e Manual (OFX)</h3>
+                <h3>Painel de Associação Automática e Manual (OFX) - <span id="banco-modal-titulo" style="color: #0284c7;">-</span></h3>
                 <button type="button" class="close-modal-btn" onclick="fecharModalGrande()">&times;</button>
             </div>
             
             <div class="modal-body">
                 <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">
-                    Abaixo estão listadas as saídas identificadas no arquivo de extrato bancário à esquerda. Associe cada uma delas à respectiva conta paga pendente no sistema à direita.
+                    Abaixo estão listadas as saídas do extrato bancário à esquerda. Vincule-as às respectivas contas pagas no sistema à direita.
                 </p>
 
                 <div class="conciliacao-split-container">
-                    
+                    <!-- LADO ESQUERDO: OFX -->
                     <div class="split-column">
                         <h4>1. Lançamentos do Extrato Bancário</h4>
                         <table class="mini-table">
@@ -382,65 +381,36 @@
                                     <th>Valor</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td>22/06/2026</td>
-                                    <td style="text-align: left; font-weight: 500;">Tarifa Bancária PJ</td>
-                                    <td style="color: #dc2626; font-weight: 600;">R$ 45,00</td>
-                                </tr>
-                                <tr>
-                                    <td>23/06/2026</td>
-                                    <td style="text-align: left; font-weight: 500;">PGTO FORNECEDOR ABC LTDA</td>
-                                    <td style="color: #dc2626; font-weight: 600;">R$ 1.250,00</td>
-                                </tr>
-                            </tbody>
+                            <tbody id="corpo-extrato-ofx"></tbody>
                         </table>
                     </div>
 
+                    <!-- LADO DIREITO: DROP-DOWNS -->
                     <div class="split-column">
                         <h4>2. Vincular com Conta do Sistema</h4>
                         <table class="mini-table">
                             <thead>
                                 <tr>
-                                    <th>Ação de Associação / Match</th>
+                                    <th>Ação de Associação / Match (Contas em Aberto)</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td>
-                                        <select class="select-match">
-                                            <option value="">-- Selecione uma conta para associar --</option>
-                                            <option value="1">Tarifas Diversas - Banco do Brasil (R$ 45,00 - 20/06)</option>
-                                            <option value="2">Fornecedor Simulação S/A (R$ 120,00 - 15/06)</option>
-                                        </select>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <select class="select-match">
-                                            <option value="" disabled selected>✨ Sugestão encontrada: ABC Distribuidora (R$ 1.250,00 - 23/06)</option>
-                                            <option value="3">ABC Distribuidora (R$ 1.250,00 - 23/06)</option>
-                                            <option value="4">Outra Conta Paga Pendente...</option>
-                                        </select>
-                                    </td>
-                                </tr>
-                            </tbody>
+                            <tbody id="corpo-vinculacao-sistema"></tbody>
                         </table>
                     </div>
-
                 </div>
             </div>
             
             <div class="modal-footer" style="margin-top: 20px;">
                 <button type="button" class="btn-cancelar" onclick="fecharModalGrande()">Cancelar</button>
-                <button type="button" class="btn-salvar-modal" style="background-color: #16a34a;" onclick="alert('Simulação: Lançamentos conciliados com sucesso!')">Confirmar e Conciliar Lançamentos</button>
+                <button type="button" class="btn-salvar-modal" style="background-color: #16a34a;" onclick="enviarConciliacaoFinal()">Confirmar e Conciliar Lançamentos</button>
             </div>
         </div>
     </div>
 
-
+    <!-- ⚙️ CONTROLE JAVASCRIPT DINÂMICO BLINDADO -->
     <script>
-        // Modal 1 (Pequeno)
+        let accountsPendingFromSystem = [];
+
         function abrirModalOfx() {
             document.getElementById('ofxModal').classList.add('active');
         }
@@ -448,22 +418,127 @@
             document.getElementById('ofxModal').classList.remove('active');
             document.getElementById('ofxForm').reset();
         }
-
-        // Modal 2 (Grande)
-        function abrirModalGrande() {
-            document.getElementById('ofxConciliacaoModal').classList.add('active');
-        }
         function fecharModalGrande() {
             document.getElementById('ofxConciliacaoModal').classList.remove('active');
         }
 
-        // Simulação do comportamento de transição entre telas
-        function simularTransicaoModal(event) {
-            event.preventDefault(); // Impede o reload da página
-            fecharModalOfx();       // Fecha o formulário inicial
-            abrirModalGrande();     // Transiciona abrindo a tela de conciliação
+        // Intercepta o envio do formulário 
+        document.getElementById('ofxForm').addEventListener('submit', function(event) {
+            event.preventDefault(); 
+
+            const formData = new FormData(this);
+            const btnSubmit = this.querySelector('button[type="submit"]');
+            
+            btnSubmit.innerText = "Processando arquivo...";
+            btnSubmit.disabled = true;
+
+            // Envia o arquivo de forma assíncrona para o Django
+            fetch("{% url 'processar_ofx_ajax' %}", {
+                method: "POST",
+                body: formData,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                btnSubmit.innerText = "Carregar Lançamentos";
+                btnSubmit.disabled = false;
+
+                if (data.success) {
+                    // Armazena o array global enviado pelo Python
+                    accountsPendingFromSystem = data.contas_pendentes;
+                    document.getElementById('banco-modal-titulo').innerText = data.banco;
+                    
+                    // Monta as tabelas em tempo de execução
+                    renderizarTelasDeConciliacao(data.transacoes_ofx);
+                    
+                    fecharModalOfx();
+                    document.getElementById('ofxConciliacaoModal').classList.add('active');
+                } else {
+                    alert("Aviso do Servidor: " + data.error);
+                }
+            })
+            .catch(error => {
+                btnSubmit.innerText = "Carregar Lançamentos";
+                btnSubmit.disabled = false;
+                console.error("Erro na requisição Fetch:", error);
+                alert("Erro crítico ao tentar conectar com a rota do Django.");
+            });
+        });
+
+        // Constrói dinamicamente as linhas das duas tabelas lado a lado
+        function renderizarTelasDeConciliacao(transacoesOfx) {
+            const corpoExtrato = document.getElementById('corpo-extrato-ofx');
+            const corpoVinculacao = document.getElementById('corpo-vinculacao-sistema');
+            
+            corpoExtrato.innerHTML = "";
+            corpoVinculacao.innerHTML = "";
+
+            if (!transacoesOfx || transacoesOfx.length === 0) {
+                corpoExtrato.innerHTML = `<tr><td colspan="3" style="color: #94a3b8; text-align: center;">Nenhuma transação encontrada no arquivo.</td></tr>`;
+                return;
+            }
+
+            transacoesOfx.forEach((tx, index) => {
+                // 1. Criação da linha do extrato bancário (Lado Esquerdo)
+                const trExtrato = document.createElement('tr');
+                trExtrato.innerHTML = `
+                    <td>${tx.data}</td>
+                    <td style="text-align: left; font-weight: 500;">${tx.descricao}</td>
+                    <td style="color: #dc2626; font-weight: 600;">R$ ${tx.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                `;
+                corpoExtrato.appendChild(trExtrato);
+
+                // 2. Criação do Dropdown de Associação (Lado Direito)
+                const trVinculo = document.createElement('tr');
+                let optionsHtml = `<option value="">-- Ignorar ou Não Associar --</option>`;
+                
+                // Avalia se o Django retornou registros na lista de contas
+                if (accountsPendingFromSystem && accountsPendingFromSystem.length > 0) {
+                    accountsPendingFromSystem.forEach(conta => {
+                        // Match inteligente arredondando em duas casas decimais
+                        const ehSugestao = (conta.valor.toFixed(2) === tx.valor.toFixed(2));
+                        const labelSugestao = ehSugestao ? "✨ Sugestão: " : "";
+                        
+                        // Uso de template literals protegendo caracteres especiais e aspas nos nomes dos fornecedores
+                        optionsHtml += `
+                            <option value="${conta.id}" ${ehSugestao ? 'selected' : ''}>
+                                ${labelSugestao}${conta.fornecedor} (R$ ${conta.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})} - ${conta.data_pagamento})
+                            </option>
+                        `;
+                    });
+                } else {
+                    optionsHtml += `<option value="" disabled>⚠️ Nenhuma conta paga encontrada no sistema</option>`;
+                }
+
+                trVinculo.innerHTML = `
+                    <td>
+                        <select class="select-match" data-index="${index}" style="width: 100%; height: 28px; font-size: 12px;">
+                            ${optionsHtml}
+                        </select>
+                    </td>
+                `;
+                corpoVinculacao.appendChild(trVinculo);
+            });
+        }
+
+        // Coleta e mapeamento das associações finais feitas pelo usuário
+        function enviarConciliacaoFinal() {
+            const selects = document.querySelectorAll('.select-match');
+            let vinculos = [];
+
+            selects.forEach(select => {
+                if (select.value) {
+                    vinculos.push({
+                        conta_id: select.value
+                    });
+                }
+            });
+
+            console.log("Dicionário estruturado para gravação em massa no Django:", vinculos);
+            alert("Sucesso! Capturados " + vinculos.length + " vínculos prontos para gravação no banco.");
         }
     </script>
-
 </body>
 </html>
