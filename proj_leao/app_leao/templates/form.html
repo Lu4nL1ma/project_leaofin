@@ -217,7 +217,7 @@
                 <select id="id_parcela" name="parcela" class="seletor-custom" required>
                     <option value="" disabled selected>Selecione a quantidade de parcelas...</option>
                     {% for parc in opcoes_parcelas %}
-                        <option value="{{ parc.valor }}">{{ parc.label }}</option>
+                        <option value="{{ parc.valor }}">{{ parc}}</option>
                     {% endfor %}
                 </select>
             </div>
