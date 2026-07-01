@@ -240,7 +240,7 @@ def form(request):
     fornecedores_reais = Fornecedor.objects.values_list('razao_social', flat=True).distinct().order_by('razao_social')
     
     # 🏦 Busca as bandeiras/nomes de bancos reais que você já utiliza nas transações
-    bancos_reais = ContaPagar.objects.values_list('banco', flat=True).distinct().order_by('banco')
+    bancos_reais = BancoSaldo.objects.values_list('nome', flat=True).distinct().order_by('nome')
     
     # 🏷️ Busca as categorias que criamos e migramos no banco
     categorias_reais = Categoria.objects.all()
