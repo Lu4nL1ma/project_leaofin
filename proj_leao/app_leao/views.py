@@ -246,9 +246,10 @@ def form(request):
     categorias_reais = Categoria.objects.all()
 
     # 🔢 Estrutura padrão de parcelamento comercial (1x a 12x)
-    opcoes_parcelas = [{"valor": "A vista", "label": "À vista / Única"}]
+    opcoes_parcelas = []
+    
     for i in range(1, 25):
-        opcoes_parcelas.append(i)
+        opcoes_parcelas.append(f'{i}')
 
     contexto = {
         "fornecedores": fornecedores_reais,
