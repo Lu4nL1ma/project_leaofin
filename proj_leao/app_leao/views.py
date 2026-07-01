@@ -210,56 +210,51 @@ def processar_ofx_ajax(request):
 
 def form(request):
     if request.method == "POST":
-        # 📥 Coleta os dados selecionados nos <select>
         fornecedor = request.POST.get("fornecedor")
         banco_nome = request.POST.get("banco")
         categoria_id = request.POST.get("categoria")
-        parcela_selecionada = request.POST.get("parcela")  # <--- CAPTURA A PARCELA (Ex: "1/12" ou "À vista")
+        parcela_selecionada = request.POST.get("parcela")
         valor = request.POST.get("valor")
 
         categoria_instancia = Categoria.objects.filter(id=categoria_id).first() if categoria_id else None
 
         try:
-            # Gravamos a informação da parcela no campo correspondente do seu model ContaPagar
-            # Certifique-se de que seu modelo possui o campo 'parcela' como CharField ou semelhante
             ContaPagar.objects.create(
                 fornecedor=fornecedor,
                 banco=banco_nome,
                 categoria=categoria_instancia,
-                parcela=parcela_selecionada,  # <--- O novo vínculo entra aqui
+                parcela=parcela_selecionada,
                 valor=valor,
                 status="A Pagar",
                 conciliado="Não"
             )
-            messages.success(request, "Novo registro financeiro salvo com sucesso!")
+            messages.success(request, "Registro financeiro salvo com sucesso!")
             return redirect('homes')
         except Exception as e:
             messages.error(request, f"Erro ao salvar registro: {str(e)}")
 
     # ==================================================================
-    # 📦 ALIMENTAÇÃO DOS SELECTS (MÉTODO GET)
+    # 📊 EXTRAÇÃO DE DADOS 100% REAIS DO SEU MODELO
     # ==================================================================
-    categorias = Categoria.objects.all()
+    # 👤 Busca os fornecedores reais gravados no seu histórico
+    fornecedores_reais = ContaPagar.objects.values_list('fornecedor', flat=True).distinct().order_by('fornecedor')
     
-    # Lista de bancos (Ajuste se você usar tabela própria do banco)
-    bancos = ["Inter", "Cora", "Itaú", "Bradesco", "Santander", "NuBank"] 
+    # 🏦 Busca as bandeiras/nomes de bancos reais que você já utiliza nas transações
+    bancos_reais = ContaPagar.objects.values_list('banco', flat=True).distinct().order_by('banco')
+    
+    # 🏷️ Busca as categorias que criamos e migramos no banco
+    categorias_reais = Categoria.objects.all()
 
-    # Fornecedores cadastrados no histórico para reaproveitamento
-    fornecedores_cadastrados = ContaPagar.objects.values_list('fornecedor', flat=True).distinct().order_by('fornecedor')
-
-    # ✨ GERAÇÃO DINÂMICA DE OPÇÕES DE PARCELAS (De 1x até 12x + À Vista)
+    # 🔢 Estrutura padrão de parcelamento comercial (1x a 12x)
     opcoes_parcelas = [{"valor": "A vista", "label": "À vista / Única"}]
     for i in range(1, 13):
-        opcoes_parcelas.append({
-            "valor": f"{i}/12", 
-            "label": f"Parcela {i} de 12"
-        })
+        opcoes_parcelas.append({"valor": f"{i}/12", "label": f"Parcela {i} de 12"})
 
     contexto = {
-        "categorias": categorias,
-        "bancos": bancos,
-        "fornecedores": fornecedores_cadastrados,
-        "opcoes_parcelas": opcoes_parcelas,  # <--- Adicionado ao contexto
+        "fornecedores": fornecedores_reais,
+        "bancos": bancos_reais,
+        "categorias": categorias_reais,
+        "opcoes_parcelas": opcoes_parcelas,
     }
     
     return render(request, "form.html", contexto)
@@ -319,6 +314,7 @@ def aba_conciliacao(request):
         'bancos_disponiveis': bancos_disponiveis, # << INJETADO NO CONTEXTO
     }
     return render(request, 'conciliacao.html', context)
+
 
 def conciliar(request, identi):
     print(f"ID recebido para conciliação: {identi}")
