@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from app_leao.models import ContaPagar, Fornecedor, BancoSaldo # 📦 IMPORTADO O NOVO MODEL DE BANCOS
+from app_leao.models import ContaPagar, Fornecedor, BancoSaldo, Categoria 
 from django.core.paginator import Paginator
 from django.contrib import messages
 from datetime import datetime, timedelta
@@ -209,38 +209,60 @@ def processar_ofx_ajax(request):
     return JsonResponse({'success': False, 'error': 'Método inválido ou arquivo não enviado.'})
 
 def form(request):
-    if request.method == 'POST':
-        # Captura os dados do formulário usando o atributo 'name' do HTML
-        vencimento = request.POST.get('vencimento')
-        valor = request.POST.get('valor')
-        fornecedor = request.POST.get('fornecedor')
-        categoria = request.POST.get('categoria')
-        banco = request.POST.get('banco')
-        parcela = request.POST.get('parcela')
-        observacao = request.POST.get('observacao')
+    if request.method == "POST":
+        # 📥 Coleta os dados selecionados nos <select>
+        fornecedor = request.POST.get("fornecedor")
+        banco_nome = request.POST.get("banco")
+        categoria_id = request.POST.get("categoria")
+        parcela_selecionada = request.POST.get("parcela")  # <--- CAPTURA A PARCELA (Ex: "1/12" ou "À vista")
+        valor = request.POST.get("valor")
 
-        # Cria e salva o registro no banco de dados
+        categoria_instancia = Categoria.objects.filter(id=categoria_id).first() if categoria_id else None
+
         try:
+            # Gravamos a informação da parcela no campo correspondente do seu model ContaPagar
+            # Certifique-se de que seu modelo possui o campo 'parcela' como CharField ou semelhante
             ContaPagar.objects.create(
-                vencimento=vencimento, 
-                valor=valor,
                 fornecedor=fornecedor,
-                categoria=categoria,
-                banco=banco,
-                parcela=parcela,
-                observacao=observacao
+                banco=banco_nome,
+                categoria=categoria_instancia,
+                parcela=parcela_selecionada,  # <--- O novo vínculo entra aqui
+                valor=valor,
+                status="A Pagar",
+                conciliado="Não"
             )
-            messages.success(request, "Lançamento cadastrado com sucesso!")
-
-            return redirect('homes') 
+            messages.success(request, "Novo registro financeiro salvo com sucesso!")
+            return redirect('homes')
         except Exception as e:
-            messages.error(request, f"Erro ao salvar: {e}")
+            messages.error(request, f"Erro ao salvar registro: {str(e)}")
 
-    # 🔄 SE FOR GET, CARREGA OS BANCOS CASO SEU FORMULÁRIO DE CADASTRO TAMBÉM PRECISE DELES
-    bancos_disponiveis = BancoSaldo.objects.all().order_by('nome')
-    context = {"bancos_disponiveis": bancos_disponiveis}
+    # ==================================================================
+    # 📦 ALIMENTAÇÃO DOS SELECTS (MÉTODO GET)
+    # ==================================================================
+    categorias = Categoria.objects.all()
+    
+    # Lista de bancos (Ajuste se você usar tabela própria do banco)
+    bancos = ["Inter", "Cora", "Itaú", "Bradesco", "Santander", "NuBank"] 
 
-    return render(request, 'form.html', context) 
+    # Fornecedores cadastrados no histórico para reaproveitamento
+    fornecedores_cadastrados = ContaPagar.objects.values_list('fornecedor', flat=True).distinct().order_by('fornecedor')
+
+    # ✨ GERAÇÃO DINÂMICA DE OPÇÕES DE PARCELAS (De 1x até 12x + À Vista)
+    opcoes_parcelas = [{"valor": "A vista", "label": "À vista / Única"}]
+    for i in range(1, 13):
+        opcoes_parcelas.append({
+            "valor": f"{i}/12", 
+            "label": f"Parcela {i} de 12"
+        })
+
+    contexto = {
+        "categorias": categorias,
+        "bancos": bancos,
+        "fornecedores": fornecedores_cadastrados,
+        "opcoes_parcelas": opcoes_parcelas,  # <--- Adicionado ao contexto
+    }
+    
+    return render(request, "form.html", contexto)
 
 
 def aba_conciliacao(request):
