@@ -172,7 +172,6 @@ class Fornecedor(models.Model):
         return self.nome_fantasia if self.nome_fantasia else self.razao_social
 
 
-
 # NOVA TABELA INDEPENDENTE PARA VOCÊ CADASTRAR OS BANCOS QUE QUISER
 class BancoSaldo(models.Model):
     nome = models.CharField(max_length=50, unique=True, verbose_name="Nome do Banco/Conta")
@@ -183,3 +182,18 @@ class BancoSaldo(models.Model):
     class Meta:
         verbose_name = "Conta com Saldo"
         verbose_name_plural = "Contas com Saldo"
+
+class Categoria(models.Model):
+    nome = models.CharField(max_length=100, unique=True, verbose_name="Nome da Categoria")
+    descricao = models.TextField(blank=True, null=True, verbose_name="Descrição")
+    descricao = models.TextField(blank=True, null=True, verbose_name="Descrição")
+    tipo = models.CharField(max_length=50, choices=[('Despesa', 'Despesa'), ('Receita', 'Receita')], verbose_name="Tipo de Categoria")
+    criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+
+    class Meta:
+        verbose_name = "Categoria"
+        verbose_name_plural = "Categorias"
+        ordering = ['nome']
+
+    def __str__(self):
+        return self.nome
