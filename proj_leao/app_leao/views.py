@@ -237,7 +237,7 @@ def form(request):
     # 📊 EXTRAÇÃO DE DADOS 100% REAIS DO SEU MODELO
     # ==================================================================
     # 👤 Busca os fornecedores reais gravados no seu histórico
-    fornecedores_reais = Categoria.objects.values_list('razao_social', flat=True).distinct().order_by('razao_social')
+    fornecedores_reais = Fornecedor.objects.values_list('razao_social', flat=True).distinct().order_by('razao_social')
     
     # 🏦 Busca as bandeiras/nomes de bancos reais que você já utiliza nas transações
     bancos_reais = ContaPagar.objects.values_list('banco', flat=True).distinct().order_by('banco')
