@@ -247,8 +247,8 @@ def form(request):
 
     # 🔢 Estrutura padrão de parcelamento comercial (1x a 12x)
     opcoes_parcelas = [{"valor": "A vista", "label": "À vista / Única"}]
-    for i in range(1, 13):
-        opcoes_parcelas.append({"valor": f"{i}/12", "label": f"Parcela {i} de 12"})
+    for i in range(1, 25):
+        opcoes_parcelas.append(i)
 
     contexto = {
         "fornecedores": fornecedores_reais,
