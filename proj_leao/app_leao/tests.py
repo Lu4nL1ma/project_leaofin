@@ -1,98 +1,60 @@
-import sqlite3
-import pandas as pd
+import csv
+import os
+from django.conf import settings  # Importa as configurações do Django
+from django.core.management.base import BaseCommand, CommandError
+from app_leao.models import Categoria  # Substitua 'seu_app' pelo nome real do seu app
 
 
-def importar_excel_para_sqlite(
-    caminho_excel, nome_banco, nome_tabela, nome_aba=0
-):
-    conn = None
-    try:
-        # 1. Lê a planilha Excel usando o pandas
-        # nome_aba=0 pega a primeira aba por padrão.
-        df = pd.read_excel(caminho_excel, sheet_name=nome_aba)
+class Command(BaseCommand):
+    help = "Importa categorias a partir de um arquivo CSV localizado na raiz do projeto"
 
-        # Trata valores vazios/nulos do Excel para que o Python entenda como None (NULL no banco)
-        df = df.where(pd.notnull(df), None)
+    def add_arguments(self, parser):
+        # Agora o usuário passa apenas o nome do arquivo (ex: dados.csv)
+        parser.add_argument("csv_filename", type=str, help="Nome do arquivo CSV dentro do projeto")
 
-        # 2. Conecta ao banco de dados SQLite
-        conn = sqlite3.connect(nome_banco)
-        cursor = conn.cursor()
+    def handle(self, *args, **options):
+        # Monta o caminho dinamicamente combinando a raiz do projeto com o nome do arquivo
+        csv_path = os.path.join(settings.BASE_DIR, options["csv_filename"])
 
-        # 3. Define todas as colunas que a tabela do banco possui hoje no Django
-        colunas = (
-            "(vencimento, fornecedor, categoria, banco, valor, parcela, "
-            "observacao, ultimo_pagamento, juros, status, conciliado)"
-        )
+        # Verifica se o arquivo realmente existe no caminho montado
+        if not os.path.exists(csv_path):
+            raise CommandError(f"Arquivo não encontrado em: {csv_path}")
 
-        # 11 placeholders correspondentes às 11 colunas
-        placeholders = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-        query = f"INSERT INTO {nome_tabela} {colunas} VALUES {placeholders};"
+        self.stdout.write(self.style.WARNING(f"Iniciando a leitura de: {csv_path}"))
 
-        registros_inseridos = 0
+        categorias_para_criar = []
+        
+        with open(csv_path, mode="r", encoding="utf-8") as file:
+            reader = csv.DictReader(file)
+            
+            for linha in reader:
+                nome = linha.get("nome", "").strip()
+                grupo = linha.get("grupo", "").strip()
+                tipo = linha.get("tipo", "").strip()
+                descricao = inline_descricao = linha.get("descricao", "").strip()
 
-        print("Iniciando a leitura das linhas e conversão de dados...")
+                if not nome:
+                    continue  
+                
+                if Categoria.objects.filter(nome=nome).exists():
+                    self.stdout.write(
+                        self.style.NOTICE(f"Categoria '{nome}' já existe. Pula.")
+                    )
+                    continue
 
-        # 4. Percorre cada linha da planilha Excel de forma dinâmica
-        for index, linha in df.iterrows():
+                categoria = Categoria(
+                    nome=nome or "-",
+                    grupo=grupo or "-",
+                    tipo=tipo or "-",
+                    descricao=descricao or "-"
+                )
+                categorias_para_criar.append(categoria)
 
-            # --- AJUSTE E MÁSCARA DA DATA ---
-            # Converte '18/06/2026' (padrão BR) para um objeto de data e depois formata como '2026-06-18' (padrão SQLite/Django)
-            data_formatada = pd.to_datetime(linha["vencimento"], dayfirst=True)
-            vencimento = data_formatada.strftime("%Y-%m-%d")
-
-            # Demais dados dinâmicos vindos do Excel
-            fornecedor = linha["fornecedor"]
-            categoria = linha["categoria"]
-            banco = linha["banco"]
-            valor = float(linha["valor"])
-
-            # 5. Monta a tupla combinando os dados DINÂMICOS (Excel) com os DEFAULTS (Model)
-            dados_registro = (
-                vencimento,  # Dinâmico e Formatado (Ex: "2026-06-18")
-                fornecedor,  # Dinâmico (Excel)
-                categoria,  # Dinâmico (Excel)
-                banco,  # Dinâmico (Excel)
-                valor,  # Dinâmico (Excel)
-                "1/1",  # default do model: parcela
-                None,  # default do model: observacao (blank/null)
-                None,  # default do model: ultimo_pagamento (blank/null)
-                0.00,  # default do model: juros
-                "Pendente",  # default do model: status
-                "Não",  # default do model: conciliado
+        if categorias_para_criar:
+            quantidade = len(categorias_para_criar)
+            Categoria.objects.bulk_create(categorias_para_criar)
+            self.stdout.write(
+                self.style.SUCCESS(f"Sucesso! {quantidade} categorias inseridas na tabela.")
             )
-
-            # Executa a inserção da linha atual na memória do cursor
-            cursor.execute(query, dados_registro)
-            registros_inseridos += 1
-
-        # 6. Salva todas as inserções de uma vez só no banco de dados (Garante performance)
-        conn.commit()
-
-        print("---" * 15)
-        print(
-            f"Sucesso! {registros_inseridos} registros importados com sucesso para a tabela '{nome_tabela}'."
-        )
-        print("---" * 15)
-
-    except Exception as e:
-        # Se der qualquer erro no processo, desfaz o que foi feito para não corromper o banco
-        if conn:
-            conn.rollback()
-        print(f"\n❌ Erro durante a importação: {e}")
-
-    finally:
-        if conn:
-            conn.close()
-            print("Conexão com o banco fechada.")
-
-
-# --- CONFIGURAÇÃO E EXECUÇÃO ---
-# 1. Coloque o nome/caminho correto do seu arquivo Excel aqui:
-CAMINHO_EXCEL = "proj_leao/app_leao/bases_excel/up_finish.xlsx"
-
-# 2. Seus caminhos de banco e tabela já configurados:
-MEU_BANCO = "/workspaces/project_leaofin/proj_leao/db.sqlite3"
-MINHA_TABELA = "app_leao_contapagar"
-
-# Executa a função
-importar_excel_para_sqlite(CAMINHO_EXCEL, MEU_BANCO, MINHA_TABELA)
+        else:
+            self.stdout.write(self.style.WARNING("Nenhuma nova categoria para importar."))

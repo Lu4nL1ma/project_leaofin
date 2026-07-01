@@ -184,10 +184,10 @@ class BancoSaldo(models.Model):
         verbose_name_plural = "Contas com Saldo"
 
 class Categoria(models.Model):
-    nome = models.CharField(max_length=100, unique=True, verbose_name="Nome da Categoria")
-    descricao = models.TextField(blank=True, null=True, verbose_name="Descrição")
-    descricao = models.TextField(blank=True, null=True, verbose_name="Descrição")
-    tipo = models.CharField(max_length=50, choices=[('Despesa', 'Despesa'), ('Receita', 'Receita')], verbose_name="Tipo de Categoria")
+    nome = models.CharField(max_length=100, unique=True, verbose_name="Nome da Categoria", default="-")
+    grupo = models.TextField(blank=True, null=True, verbose_name="grupo", default="-")
+    tipo = models.CharField(max_length=50, verbose_name="Tipo de Categoria", default="-")
+    descricao = models.TextField(blank=True, null=True, verbose_name="Descrição", default="-")
     criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
 
     class Meta:
