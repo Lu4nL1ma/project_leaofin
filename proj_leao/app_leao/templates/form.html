@@ -190,11 +190,15 @@
                 <label for="id_categoria" class="campo-label">Categoria da Despesa:</label>
                 <select id="id_categoria" name="categoria" class="seletor-custom" required>
                     <option value="" disabled selected>Selecione a classificação de custo...</option>
-                    {% for cat in categorias %}
-                        <option value="{{ cat.id }}">{{ cat.nome }} {{ cat.get_tipo_display }}</option>
-                    {% empty %}
-                        <option value="" disabled>Nenhuma categoria localizada. Cadastre-as no Admin.</option>
-                    {% endfor %}
+                        {% for cat in categorias %}
+                            {% if cat.nome|length < 5 %}
+                                <option value="{{ cat.id }}">{{ cat.nome|upper }} - {{ cat.get_tipo_display }}</option>
+                            {% else %}
+                                <option value="{{ cat.id }}">{{ cat.nome }} - {{ cat.get_tipo_display }}</option>
+                            {% endif %}
+                        {% empty %}
+                            <option value="" disabled>Nenhuma categoria localizada. Cadastre-as no Admin.</option>
+                        {% endfor %}
                 </select>
             </div>
 
