@@ -198,9 +198,9 @@
                                     {% for cat in grupo.list %}
                                         
                                         {% if cat.nome|length < 5 %}
-                                            <option value="{{ cat.id }}">{{ cat.nome|upper }} - {{ cat.get_tipo_display }}</option>
+                                            <option value="{{ cat.id }}">{{ cat.nome|upper }} {{ cat.get_tipo_display }}</option>
                                         {% else %}
-                                            <option value="{{ cat.id }}">{{ cat.nome }} - {{ cat.get_tipo_display }}</option>
+                                            <option value="{{ cat.id }}">{{ cat.nome }} {{ cat.get_tipo_display }}</option>
                                         {% endif %}
                                         
                                     {% endfor %}
