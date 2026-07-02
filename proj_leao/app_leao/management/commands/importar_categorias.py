@@ -25,30 +25,41 @@ class Command(BaseCommand):
 
         categorias_para_criar = []
 
-        # Função auxiliar para limpar ruídos como parênteses vazios e espaços extras
+        # Função auxiliar ultra-agressiva para limpar ruídos e parênteses fantasmas
         def limpar_texto(texto):
             if not texto:
                 return "-"
+            
+            # Converte para string e remove espaços normais das pontas
             texto_limpo = str(texto).strip()
-            # Remove parênteses vazios "()" que possam ter sido injetados erroneamente
-            texto_limpo = re.sub(r'\(\s*\)', '', texto_limpo).strip()
+            
+            # Remove caracteres invisíveis comuns de planilhas (\xa0, \t, \n, \r) e os troca por um espaço simples
+            texto_limpo = re.sub(r'[\s\xa0]+', ' ', texto_limpo).strip()
+            
+            # Remove parênteses no final da string se estiverem vazios ou apenas com espaços
+            texto_limpo = re.sub(r'\(\s*\)$', '', texto_limpo).strip()
+            
+            # Força a remoção caso os caracteres "()" tenham vindo colados de forma literal
+            if texto_limpo.endswith('()'):
+                texto_limpo = texto_limpo[:-2].strip()
+                
             return texto_limpo if texto_limpo else "-"
 
         with open(csv_path, mode="r", encoding="utf-8-sig") as file:
-            # Descobre automaticamente se o separador é vírgula ou ponto e vírgula
+            # Descobre automaticamente se o separador do CSV é vírgula (,) ou ponto e vírgula (;)
             try:
                 amostra = file.read(2048)
                 dialeto = csv.Sniffer().sniff(amostra, delimiters=[',', ';'])
                 file.seek(0)
             except csv.Error:
-                # Caso não consiga detectar, assume o padrão de vírgula
+                # Caso não consiga detectar (arquivo muito pequeno), assume o padrão de vírgula
                 dialeto = 'excel'
                 file.seek(0)
 
             reader = csv.DictReader(file, dialect=dialeto)
 
             for linha in reader:
-                # Captura e limpa os campos individualmente
+                # Captura e limpa os campos individualmente através do filtro
                 nome = limpar_texto(linha.get("nome"))
                 grupo = limpar_texto(linha.get("grupo"))
                 tipo = limpar_texto(linha.get("tipo"))
@@ -73,7 +84,7 @@ class Command(BaseCommand):
                 )
                 categorias_para_criar.append(categoria)
 
-        # Insere tudo de uma vez de forma performática
+        # Insere todos os dados de uma única vez de forma performática
         if categorias_para_criar:
             quantidade = len(categorias_para_criar)
             Categoria.objects.bulk_create(categorias_para_criar)

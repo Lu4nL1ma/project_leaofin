@@ -1,74 +1,191 @@
 from django.contrib import admin
-from .models import ContaPagar, Fornecedor, BancoSaldo
+from .models import ContaPagar, Fornecedor, BancoSaldo, Categoria
+
 
 @admin.register(ContaPagar)
 class ContaPagarAdmin(admin.ModelAdmin):
-    # Colunas que vão aparecer na listagem geral
     list_display = (
-        'vencimento', 
-        'fornecedor', 
-        'categoria', 
-        'banco', 
-        'parcela', 
-        'valor', 
-        'status', 
-        'conciliado'
+        "vencimento",
+        "fornecedor",
+        "categoria",
+        "valor",
+        "juros",
+        "status",
+        "banco",
+        "banco_pago",
+        "conciliado",
     )
-    
-    # Filtros que vão aparecer na barra lateral direita
-    list_filter = ('status', 'conciliado', 'vencimento', 'categoria', 'banco')
-    
-    # Campos que permitem busca digitável
-    search_fields = ('fornecedor', 'categoria', 'observacao')
-    
-    # Permite editar o status e a conciliação direto na lista, sem abrir o registro
-    list_editable = ('status', 'conciliado')
-    
-    # Organização visual dos campos dentro do formulário de edição
+
+    list_filter = (
+        "status",
+        "categoria",
+        "banco",
+        "banco_pago",
+        "conciliado",
+        "vencimento",
+        "ultimo_pagamento",
+    )
+
+    search_fields = (
+        "fornecedor",
+        "categoria",
+        "banco",
+        "banco_pago",
+        "observacao",
+    )
+
+    ordering = ("-vencimento",)
+
+    list_per_page = 30
+
+    date_hierarchy = "vencimento"
+
+    readonly_fields = ()
+
     fieldsets = (
-        ('Informações Básicas', {
-            'fields': ('fornecedor', 'categoria', 'valor', 'parcela')
+        ("Dados da Conta", {
+            "fields": (
+                "vencimento",
+                "fornecedor",
+                "categoria",
+                "parcela",
+            )
         }),
-        ('Planejamento e Vencimento', {
-            'fields': ('vencimento', 'banco')
+        ("Valores", {
+            "fields": (
+                "valor",
+                "juros",
+            )
         }),
-        ('Pagamento e Conciliação', {
-            'fields': ('ultimo_pagamento', 'juros', 'banco_pago', 'status', 'conciliado')
+        ("Pagamento", {
+            "fields": (
+                "status",
+                "ultimo_pagamento",
+                "banco",
+                "banco_pago",
+                "conciliado",
+            )
         }),
-        ('Informações Adicionais', {
-            'fields': ('observacao',),
-            'classes': ('collapse',),  # Minimiza este bloco por padrão
+        ("Observações", {
+            "fields": (
+                "observacao",
+            )
         }),
     )
 
 
 @admin.register(Fornecedor)
 class FornecedorAdmin(admin.ModelAdmin):
-    list_display = ('razao_social', 'nome_fantasia', 'cnpj', 'telefone', 'ativo')
-    list_filter = ('ativo', 'estado', 'criado_em')
-    search_fields = ('razao_social', 'nome_fantasia', 'cnpj', 'email')
-    list_editable = ('ativo',)
-    
-    # Define quais campos não podem ser editados manualmente (são automáticos)
-    readonly_fields = ('criado_em', 'atualizado_em')
-    
+    list_display = (
+        "razao_social",
+        "nome_fantasia",
+        "cnpj",
+        "telefone",
+        "email",
+        "cidade",
+        "estado",
+        "ativo",
+    )
+
+    list_filter = (
+        "ativo",
+        "estado",
+        "cidade",
+    )
+
+    search_fields = (
+        "razao_social",
+        "nome_fantasia",
+        "cnpj",
+        "email",
+        "telefone",
+    )
+
+    ordering = ("razao_social",)
+
+    readonly_fields = (
+        "criado_em",
+        "atualizado_em",
+    )
+
+    list_per_page = 30
+
     fieldsets = (
-        ('Dados Cadastrais', {
-            'fields': ('razao_social', 'nome_fantasia', 'cnpj', 'ativo')
+        ("Dados Gerais", {
+            "fields": (
+                "razao_social",
+                "nome_fantasia",
+                "cnpj",
+                "ativo",
+            )
         }),
-        ('Contato', {
-            'fields': ('email', 'telefone')
+        ("Contato", {
+            "fields": (
+                "email",
+                "telefone",
+            )
         }),
-        ('Endereço', {
-            'fields': ('logradouro', 'cidade', 'estado')
+        ("Endereço", {
+            "fields": (
+                "logradouro",
+                "cidade",
+                "estado",
+            )
         }),
-        ('Datas de Controle', {
-            'fields': ('criado_em', 'atualizado_em'),
+        ("Controle", {
+            "fields": (
+                "criado_em",
+                "atualizado_em",
+            )
         }),
     )
 
 
 @admin.register(BancoSaldo)
 class BancoSaldoAdmin(admin.ModelAdmin):
-    list_display = ('nome',)
-    search_fields = ('nome',)
+    list_display = ("nome",)
+    search_fields = ("nome",)
+    ordering = ("nome",)
+
+
+@admin.register(Categoria)
+class CategoriaAdmin(admin.ModelAdmin):
+    list_display = (
+        "nome",
+        "grupo",
+        "tipo",
+        "criado_em",
+    )
+
+    list_filter = (
+        "tipo",
+        "grupo",
+    )
+
+    search_fields = (
+        "nome",
+        "grupo",
+        "descricao",
+    )
+
+    ordering = ("nome",)
+
+    readonly_fields = (
+        "criado_em",
+    )
+
+    fieldsets = (
+        ("Informações", {
+            "fields": (
+                "nome",
+                "grupo",
+                "tipo",
+                "descricao",
+            )
+        }),
+        ("Controle", {
+            "fields": (
+                "criado_em",
+            )
+        }),
+    )
