@@ -190,15 +190,25 @@
                 <label for="id_categoria" class="campo-label">Categoria da Despesa:</label>
                 <select id="id_categoria" name="categoria" class="seletor-custom" required>
                     <option value="" disabled selected>Selecione a classificação de custo...</option>
-                        {% for cat in categorias %}
-                            {% if cat.nome|length < 5 %}
-                                <option value="{{ cat.id }}">{{ cat.nome|upper }} {{ cat.get_tipo_display }}</option>
-                            {% else %}
-                                <option value="{{ cat.id }}">{{ cat.nome }} {{ cat.get_tipo_display }}</option>
-                            {% endif %}
-                        {% empty %}
-                            <option value="" disabled>Nenhuma categoria localizada. Cadastre-as no Admin.</option>
-                        {% endfor %}
+                        {% regroup categorias by grupo as grupos_agrupados %}
+
+                            {% for grupo in grupos_agrupados %}
+                                <optgroup label="{{ grupo.grouper|upper }}">
+                                    
+                                    {% for cat in grupo.list %}
+                                        
+                                        {% if cat.nome|length < 5 %}
+                                            <option value="{{ cat.id }}">{{ cat.nome|upper }} - {{ cat.get_tipo_display }}</option>
+                                        {% else %}
+                                            <option value="{{ cat.id }}">{{ cat.nome }} - {{ cat.get_tipo_display }}</option>
+                                        {% endif %}
+                                        
+                                    {% endfor %}
+                                    
+                                </optgroup>
+                            {% empty %}
+                                <option value="" disabled>Nenhuma categoria localizada. Cadastre-as no Admin.</option>
+                            {% endfor %}
                 </select>
             </div>
 

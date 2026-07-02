@@ -243,7 +243,7 @@ def form(request):
     bancos_reais = BancoSaldo.objects.values_list('nome', flat=True).distinct().order_by('nome')
     
     # 🏷️ Busca as categorias que criamos e migramos no banco
-    categorias_reais = Categoria.objects.all()
+    categorias_reais = Categoria.objects.all().order_by('grupo', 'nome')
 
     # 🔢 Estrutura padrão de parcelamento comercial (1x a 12x)
     opcoes_parcelas = []
@@ -259,7 +259,6 @@ def form(request):
     }
     
     return render(request, "form.html", contexto)
-
 
 def aba_conciliacao(request):
     # ==========================================================================
