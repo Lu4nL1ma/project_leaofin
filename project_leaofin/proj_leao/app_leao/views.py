@@ -59,17 +59,15 @@ def tela_login(request):
 
 
 def normalizar_data(val):
-    """ Converte o valor retornado pelo openpyxl em um objeto datetime.date """
+    """ Converte o valor retornado pelo openpyxl em um objeto datetime.date válido """
     if not val:
         return None
     
-    # Se o openpyxl já retornou como datetime ou date
     if isinstance(val, datetime):
         return val.date()
     if isinstance(val, date):
         return val
 
-    # Se veio como string, tenta converter nos formatos mais comuns
     if isinstance(val, str):
         val = val.strip()
         for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
@@ -658,7 +656,7 @@ def importar_xlsx(request):
     if not rows or len(rows) < 2:
         return JsonResponse({'sucesso': False, 'erro': 'A planilha está vazia ou não possui dados suficientes.'}, status=400)
 
-    # 1. Mapeamento Inteligente dos Cabeçalhos (Linha 1)
+    # 1. Mapeamento dos Cabeçalhos (Linha 1)
     headers = [str(cell).strip().lower() if cell is not None else '' for cell in rows[0]]
 
     def get_col_index(possible_names):
@@ -673,10 +671,10 @@ def importar_xlsx(request):
     idx_valor      = get_col_index(['valor', 'valor (r$)', 'valorpago'])
     idx_vencimento = get_col_index(['vencimento', 'data vencimento', 'dt_vencimento'])
 
-    if idx_fornecedor is None or idx_banco is None or idx_categoria is None:
+    if idx_fornecedor is None or idx_banco is None or idx_categoria is None or idx_vencimento is None:
         return JsonResponse({
             'sucesso': False, 
-            'erro': 'Cabeçalhos não identificados. Certifique-se de que a planilha possui colunas para Fornecedor, Banco e Categoria.'
+            'erro': 'Cabeçalhos não identificados. Certifique-se de que a planilha possui colunas para Fornecedor, Banco, Categoria e Vencimento.'
         }, status=400)
 
     # 2. Caching para Alta Performance (Usando razao_social no Fornecedor)
@@ -712,7 +710,7 @@ def importar_xlsx(request):
         val_valor      = row[idx_valor] if idx_valor is not None else 0
         raw_vencimento = row[idx_vencimento] if idx_vencimento is not None else None
         
-        # Converte a data para um objeto datetime.date seguro
+        # Converte e valida o Vencimento
         val_vencimento = normalizar_data(raw_vencimento)
 
         # Busca nos Caches
@@ -720,7 +718,7 @@ def importar_xlsx(request):
         obj_banco      = bancos_cache.get(raw_banco.lower())
         obj_categoria  = categorias_cache.get(raw_categoria.lower())
 
-        # Validação de Relações
+        # Validação de Relações e Campos Obrigatórios
         faltantes = []
         if not obj_fornecedor:
             faltantes.append(f"Fornecedor '{raw_fornecedor}'")
@@ -728,9 +726,11 @@ def importar_xlsx(request):
             faltantes.append(f"Banco '{raw_banco}'")
         if not obj_categoria:
             faltantes.append(f"Categoria '{raw_categoria}'")
+        if not val_vencimento:
+            faltantes.append("Vencimento inválido/ausente")
 
         if faltantes:
-            erros.append(f"Linha {index}: Não cadastrado(s) -> {', '.join(faltantes)}.")
+            erros.append(f"Linha {index}: Problema em -> {', '.join(faltantes)}.")
             continue
 
         # Checagem de Duplicidade
