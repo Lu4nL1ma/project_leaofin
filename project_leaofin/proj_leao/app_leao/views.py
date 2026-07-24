@@ -63,21 +63,35 @@ def normalizar_data(val):
     if not val:
         return None
     
+    # Se o openpyxl já reconheceu como datetime/date
     if isinstance(val, datetime):
         return val.date()
     if isinstance(val, date):
         return val
 
+    # Se o Excel mandou a data como número serial (ex: 45130)
+    if isinstance(val, (int, float)):
+        try:
+            return openpyxl.utils.datetime.from_excel(val).date()
+        except Exception:
+            return None
+
+    # Se veio como string
     if isinstance(val, str):
-        val = val.strip()
-        for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
+        val = val.strip().replace('.', '/') # Normaliza 24.07.2026 para 24/07/2026
+        
+        formatos = [
+            "%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d",
+            "%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M:%S"
+        ]
+        
+        for fmt in formatos:
             try:
                 return datetime.strptime(val, fmt).date()
             except ValueError:
                 pass
                 
     return None
-
 
 def login_usuario(request):
     if request.method == "POST":
