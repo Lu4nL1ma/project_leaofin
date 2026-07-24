@@ -25,7 +25,7 @@ class ContaPagar(models.Model):
     nota_fiscal = models.CharField(max_length=50, verbose_name="Nota Fiscal", default="", blank=True)
     parcela = models.CharField(max_length=20, verbose_name="Parcela", default="1/1")
     valor = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Valor Original (R$)")
-    linha_boleto = models.TextField(verbose_name="Linha Digitável do Boleto", blank=True, null=True)
+    linha_digitavel = models.CharField(max_length=57, blank=True, null=True, default="", verbose_name="Linha Digitável do Boleto")
     observacao = models.TextField(verbose_name="Observação", blank=True, null=True)
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default="Pendente", db_index=True)
     data_inclusao = models.DateTimeField(auto_now_add=True, verbose_name="Data de Inclusão")
