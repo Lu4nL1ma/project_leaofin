@@ -632,7 +632,7 @@ def importar_xlsx(request):
             wb = openpyxl.load_workbook(arquivo, read_only=True, data_only=True)
             sheet = wb.active
 
-            fornecedores_cache = {f.nome.upper().strip(): f for f in Fornecedor.objects.all()}
+            fornecedores_cache = {f.razao_social.upper().strip(): f for f in Fornecedor.objects.all()}
             bancos_cache = {b.nome.upper().strip(): b for b in BancoSaldo.objects.all()}
             categorias_cache = {c.nome.upper().strip(): c for c in Categoria.objects.all()}
 
