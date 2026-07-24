@@ -1,0 +1,482 @@
+{% load static %}
+{% load mascaras_financeiras %}
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contas a Pagar</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        /* ============================================================
+           1. HEADER (logo + título + logout)
+           ============================================================ */
+        .main-header {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .btn-logout-header {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #ef4444;
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 4px;
+            text-decoration: none;
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+        }
+
+        .btn-logout-header:hover {
+            background-color: #ef4444;
+            color: #ffffff;
+            border-color: #ef4444;
+            box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+        }
+
+        /* ============================================================
+           2. BARRA DE AÇÕES (upload | filtros | dropdown)
+           Grid de 3 colunas: upload à esquerda, busca ao centro,
+           dropdown de ações à direita.
+           ============================================================ */
+        .filter-actions {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .search-buttons-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .filter-actions .dropdown {
+            justify-self: end;
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background-color: #ffffff;
+            min-width: 220px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.1);
+            z-index: 100;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+            margin-top: 2px;
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+            animation: fadeInDropdown 0.15s ease-in-out forwards;
+        }
+
+        @keyframes fadeInDropdown {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ============================================================
+           3. BOTÃO QUE ABRE O MODAL DE UPLOAD
+           ============================================================ */
+        .btn-open-upload {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #4a90d9;
+            background-color: #eef5fc;
+            border: 1px solid #cfe3f7;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .btn-open-upload:hover {
+            background-color: #4a90d9;
+            color: #fff;
+        }
+
+        /* ============================================================
+           4. MODAL DE UPLOAD DE XLSX
+           ============================================================ */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background-color: rgba(15, 23, 42, 0.55);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-box {
+            background-color: #fff;
+            width: 90%;
+            max-width: 420px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 24px;
+            animation: modalFadeIn 0.18s ease-out;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(-12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-template-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #16a34a;
+            text-decoration: none;
+            margin-bottom: 16px;
+            padding: 6px 10px;
+            background-color: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 5px;
+            width: fit-content;
+            transition: background-color 0.2s ease;
+        }
+
+        .modal-template-link:hover {
+            background-color: #dcfce7;
+        }
+
+        .modal-dropzone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 28px 16px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            background-color: #fafafa;
+            text-align: center;
+            transition: border-color 0.2s ease, background-color 0.2s ease;
+        }
+
+        .modal-dropzone.dragover {
+            border-color: #4a90d9;
+            background-color: #f0f7ff;
+        }
+
+        .modal-dropzone svg {
+            color: #94a3b8;
+        }
+
+        .modal-dropzone label {
+            font-size: 13px;
+            color: #475569;
+        }
+
+        .modal-dropzone input[type="file"] {
+            font-size: 13px;
+            max-width: 100%;
+        }
+
+        .modal-dropzone input[type="file"]::file-selector-button {
+            padding: 6px 12px;
+            margin-right: 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #4a90d9;
+            color: #fff;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .modal-file-name {
+            font-size: 12px;
+            color: #16a34a;
+            font-weight: 600;
+            min-height: 16px;
+        }
+        /* .modal-actions, .btn-modal-cancel e .btn-salvar-modal agora vivem
+           no style.css global (compartilhados com o modal de editar registro) */
+    </style>
+</head>
+<body>
+
+    <!-- ================================================================
+         HEADER
+         ================================================================ -->
+    <header class="main-header">
+        <img src="{% static 'img/Clube_do_Remo.png' %}" alt="Logo" class="header-logo">
+        <h1>Contas a Pagar</h1>
+
+        <a href="{% url 'logout_usuario' %}" class="btn-logout-header">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z"/>
+                <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
+            </svg>
+            Sair
+        </a>
+    </header>
+
+    <div class="dashboard-card">
+
+        <!-- ============================================================
+             BARRA DE AÇÕES
+             Duas forms independentes lado a lado:
+             1) upload_form  -> POST/multipart, faz o import do XLSX
+             2) filtro-form  -> GET, filtra a tabela
+             Não dá pra colocar as duas dentro do mesmo <form>: upload
+             precisa de POST+multipart, filtro precisa de GET (pra manter
+             os parâmetros na URL e permitir paginação/link direto).
+             ============================================================ -->
+        <div class="filter-actions">
+
+            <!-- BOTÃO QUE ABRE O MODAL DE UPLOAD -->
+            <button type="button" class="btn-open-upload" onclick="abrirModalUpload()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
+                    <path d="M7.646.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 1.707V11.5a.5.5 0 0 1-1 0V1.707L5.354 3.854a.5.5 0 1 1-.708-.708z"/>
+                </svg>
+                Importar XLSX
+            </button>
+
+            <!-- Grupo Central de Botões de Pesquisa -->
+            <!-- Os botões usam form="formFiltros" pra submeter o form GET
+                 mesmo estando fora dele estruturalmente (evita que o form
+                 precise "englobar" o grid inteiro e quebre o layout) -->
+            <div class="search-buttons-group">
+                <button type="submit" form="formFiltros" class="btn-filter">Aplicar Filtros</button>
+                <a href="{{ request.path }}" class="btn-filter btn-clear">Limpar Filtros</a>
+            </div>
+
+            <!-- DROPDOWN DE AÇÕES -->
+            <div class="dropdown">
+                <button type="button" class="btn-filter btn-dropdown">
+                    Ações
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16" style="margin-left: 6px;">
+                        <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
+                    </svg>
+                </button>
+                <div class="dropdown-content">
+                    <a href="{% url 'forms' %}">Novo Registro</a>
+                    <a href="{% url 'provisao' %}">Provisão por Período</a>
+                    <a href="{% url 'cadastrar_fornecedor' %}">Cadastrar Fornecedor</a>
+                    <a href="{% url 'saldo' %}">Saldo Físico</a>
+                    <a href="{% url 'aba_conciliacao' %}" style="border-top: 1px solid #e2e8f0; color: #16a34a;">Aba Conciliação</a>
+                    <a href="{% url 'dashboard_financeiro' %}" style="border-top: 1px solid #e2e8f0; color: #b40101;">Análise de Desempenho</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             FORM DE FILTROS (GET)
+             Fica fora do grid .filter-actions de propósito — só contém
+             a tabela com os campos de busca. O botão "Aplicar Filtros"
+             está fisicamente no grid acima, ligado aqui via form="formFiltros".
+             ============================================================ -->
+        <form method="GET" class="filter-section" id="formFiltros">
+
+                <!-- DISTÂNCIA REDUZIDA PARA COLAR OS BOTÕES NO INÍCIO DA TABELA -->
+                <div class="table-responsive" style="margin-top: 5px;">
+                    <table class="hybrid-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 45px; background-color: #f8fafc;"></th>
+                                <th>Vencimento</th>
+                                <th>Fornecedor</th>
+                                <th>Categoria</th>
+                                <th>Banco</th>
+                                <th class="text-center">Parcela</th>
+                                <th class="text-right">Valor</th>
+                                <th>Observação</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <th style="width: 45px; background-color: #f8fafc;"></th>
+                                <th>
+                                    <div class="filter-field">
+                                        <input type="text" id="data" name="data" value="{{ request.GET.data }}" placeholder="Ex: 18/06/2026" style="max-width: 200px !important;">
+                                    </div>
+                                </th>
+                                <th>
+                                    <div class="filter-field">
+                                        <input type="text" id="fornecedor" name="fornecedor" value="{{ request.GET.fornecedor }}" placeholder="Ex: Equatorial" style="max-width: 200px !important;">
+                                    </div>
+                                </th>
+                                <th>
+                                    <div class="filter-field">
+                                        <input type="text" id="categoria" name="categoria" value="{{ request.GET.categoria }}" placeholder="Ex: Aluguel" style="max-width: 200px !important;">
+                                    </div>
+                                </th>
+                                <th>
+                                    <div class="filter-field">
+                                        <input type="text" id="banco" name="banco" value="{{ request.GET.banco }}" placeholder="Ex: Nubank" style="max-width: 200px !important;">
+                                    </div>
+                                </th>
+                                <th>
+                                    <div class="filter-field">
+                                        <input type="text" id="parcela" name="parcela" value="{{ request.GET.parcela }}" placeholder="Ex: 1/1" style="max-width: 200px !important;">
+                                    </div>
+                                </th>
+                                <th>
+                                    <div class="filter-field">
+                                        <input type="text" id="valor" name="valor" value="{{ request.GET.valor }}" placeholder="Ex: 100.00" style="max-width: 200px !important;">
+                                    </div>
+                                </th>
+                                <th>
+                                    <div class="filter-field">
+                                        <input type="text" id="observacao" name="observacao" value="{{ request.GET.observacao }}" placeholder="Ex: Nota" style="max-width: 200px !important;">
+                                    </div>
+                                </th>
+                                <th>
+                                    <div class="filter-field">
+                                        <input type="text" id="status" name="status" value="{{ request.GET.status }}" placeholder="Ex: Pendente" style="max-width: 200px !important;">
+                                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+                    </form> <!-- fecha o form de filtros aqui, como no original -->
+
+                        <tbody>
+                            {% for item in page_obj %}
+                            <tr>
+                                <td class="row-index">{{ page_obj.start_index|add:forloop.counter0 }}</td>
+
+                                <td class="text-center">
+                                    {% if item.vencimento %}
+                                        {{ item.vencimento|date:"d/m/Y" }}
+                                    {% else %}
+                                        <span style="color: #94a3b8;">-</span>
+                                    {% endif %}
+                                </td>
+
+                                <td>{{ item.fornecedor }}</td>
+                                <td>{{ item.categoria }}</td>
+                                <td>{{ item.banco }}</td>
+                                <td class="text-center">{{ item.parcela }}</td>
+                                <td class="text-right" style="font-weight: 600;"> {{ item.valor|moeda_br }}</td>
+                                <td class="col-obs" title="{{ item.observacao }}">{{ item.observacao|default:"-" }}</td>
+
+                                <td>
+                                    {% if item.status == "Pago" %}
+                                        <span class="status-badge status-pago">Pago</span>
+                                    {% elif item.status == "Pendente" or item.status == "Em aberto" %}
+                                        <div style="display: inline-flex; align-items: center; gap: 8px;">
+                                            <span class="status-badge status-pendente">Pendente</span>
+                                            <a href="javascript:void(0);" onclick="abrirModal('{{ item.id }}', '{{ item.ultimo_pagamento|date:'Y-m-d' }}', '{{ item.juros }}', '{{ item.fornecedor|escapejs }}', '{{ item.vencimento|date:'d/m/Y' }}', '{{ item.valor|moeda_br }}')" title="Registrar Pagamento!" style="cursor: pointer; display: inline-flex;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="bi bi-cash-coin cash-green-premium" viewBox="0 0 16 16" style="overflow: visible;">
+                                                    <path fill-rule="evenodd" d="M11 15a4 4 0 1 0 0-8 4 4 0 0 0 0 8m5-4a5 5 0 1 1-10 0 5 5 0 0 1 10 0"/>
+                                                    <path d="M9.438 11.944c.047.596.518 1.06 1.363 1.116v.44h.375v-.443c.875-.061 1.386-.529 1.386-1.207 0-.618-.39-.936-1.09-1.1l-.296-.07v-1.2c.376.043.614.248.671.532h.658c-.047-.575-.54-1.024-1.329-1.073V8.5h-.375v.45c-.747.073-1.255.522-1.255 1.158 0 .562.378.92 1.007 1.066l.248.061v1.272c-.384-.058-.639-.27-.696-.563h-.668zm1.36-1.354c-.369-.085-.569-.26-.569-.522 0-.294.216-.514.572-.578v1.1zm.432.746c.449.104.655.272.655.569 0 .339-.257.571-.709.614v-1.195z"/>
+                                                    <path d="M1 0a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h4.083q.088-.517.258-1H3a2 2 0 0 0-2-2V3a2 2 0 0 0 2-2h10a2 2 0 0 0 2 2v3.528c.38.34.717.728 1 1.154V1a1 1 0 0 0-1-1z"/>
+                                                    <path d="M9.998 5.083 10 5a2 2 0 1 0-3.132 1.65 6 6 0 0 1 3.13-1.567"/>
+                                                </svg>
+                                            </a>
+                                            <a href="javascript:void(0);" onclick="abrirModalEditar('{{ item.id }}', '{{ item.vencimento|date:'Y-m-d' }}', '{{ item.fornecedor|escapejs }}', '{{ item.categoria|escapejs }}', '{{ item.banco|escapejs }}', '{{ item.parcela|escapejs }}', '{{ item.valor }}', '{{ item.observacao|escapejs }}')" title="Editar Registro" style="cursor: pointer; display: inline-flex; color: #64748b;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16">
+                                                    <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325"/>
+                                                </svg>
+                                            </a>
+                                        </div>
+                                    {% elif item.status == "Atrasado" %}
+                                        <div style="display: inline-flex; align-items: center; gap: 8px;">
+                                            <span class="status-badge status-atrasado">Atrasado</span>
+                                            <a href="javascript:void(0);" onclick="abrirModal('{{ item.id }}', '{{ item.ultimo_pagamento|date:'Y-m-d' }}', '{{ item.juros }}')" data-title="Registrar Pagamento!" style="cursor: pointer; display: inline-flex;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="bi bi-cash-coin cash-green-premium" viewBox="0 0 16 16" style="overflow: visible;">
+                                                    <path fill-rule="evenodd" d="M11 15a4 4 0 1 0 0-8 4 4 0 0 0 0 8m5-4a5 5 0 1 1-10 0 5 5 0 0 1 10 0"/>
+                                                    <path d="M9.438 11.944c.047.596.518 1.06 1.363 1.116v.44h.375v-.443c.875-.061 1.386-.529 1.386-1.207 0-.618-.39-.936-1.09-1.1l-.296-.07v-1.2c.376.043.614.248.671.532h.658c-.047-.575-.54-1.024-1.329-1.073V8.5h-.375v.45c-.747.073-1.255.522-1.255 1.158 0 .562.378.92 1.007 1.066l.248.061v1.272c-.384-.058-.639-.27-.696-.563h-.668zm1.36-1.354c-.369-.085-.569-.26-.569-.522 0-.294.216-.514.572-.578v1.1zm.432.746c.449.104.655.272.655.569 0 .339-.257.571-.709.614v-1.195z"/>
+                                                    <path d="M1 0a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h4.083q.088-.517.258-1H3a2 2 0 0 0-2-2V3a2 2 0 0 0 2-2h10a2 2 0 0 0 2 2v3.528c.38.34.717.728 1 1.154V1a1 1 0 0 0-1-1z"/>
+                                                    <path d="M9.998 5.083 10 5a2 2 0 1 0-3.132 1.65 6 6 0 0 1 3.13-1.567"/>
+                                                </svg>
+                                            </a>
+                                            <a href="javascript:void(0);" onclick="abrirModalEditar('{{ item.id }}', '{{ item.vencimento|date:'Y-m-d' }}', '{{ item.fornecedor|escapejs }}', '{{ item.categoria|escapejs }}', '{{ item.banco|escapejs }}', '{{ item.parcela|escapejs }}', '{{ item.valor }}', '{{ item.observacao|escapejs }}')" title="Editar Registro" style="cursor: pointer; display: inline-flex; color: #64748b;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16">
+                                                    <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325"/>
+                                                </svg>
+                                            </a>
+                                        </div>
+                                    {% else %}
+                                        <span class="status-badge" style="background-color: #f1f5f9; color: #475569;">{{ item.status|default:"-" }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="10" style="text-align: center; color: #94a3b8; font-style: italic; padding: 30px;">
+                                    Nenhum registro localizado no banco de dados.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+        <!-- ============================================================
+             PAGINAÇÃO (mantém os parâmetros de filtro ativos)
+             ============================================================ -->
+        <div class="pagination-section">
+            <div>
+                Mostrando <b>{{ page_obj.start_index }}</b> a <b>{{ page_obj.end_index }}</b> de <b>{{ page_obj.paginator.count }}</b> registros
+            </div>
+
+            {% if page_obj.has_other_pages %}
+            <div class="page-buttons">
+                {% if page_obj.has_previous %}
+                    <a class="page-btn" href="?page={{ page_obj.previous_page_number }}{% if request.GET.conciliacao %}&conciliacao={{ request.GET.conciliacao }}{% endif %}{% if request.GET.data %}&data={{ request.GET.data }}{% endif %}{% if request.GET.fornecedor %}&fornecedor={{ request.GET.fornecedor }}{% endif %}{% if request.GET.categoria %}&categoria={{ request.GET.categoria }}{% endif %}{% if request.GET.banco %}&banco={{ request.GET.banco }}{% endif %}{% if request.GET.parcela %}&parcela={{ request.GET.parcela }}{% endif %}{% if request.GET.valor %}&valor={{ request.GET.valor }}{% endif %}{% if request.GET.observacao %}&observacao={{ request.GET.observacao }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">&laquo;</a>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <span class="page-btn active">{{ num }}</span>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <a class="page-btn" href="?page={{ num }}{% if request.GET.conciliacao %}&conciliacao={{ request.GET.conciliacao }}{% endif %}{% if request.GET.data %}&data={{ request.GET.data }}{% endif %}{% if request.GET.fornecedor %}&fornecedor={{ request.GET.fornecedor }}{% endif %}{% if request.GET.categoria %}&categoria={{ request.GET.categoria }}{% endif %}{% if request.GET.banco %}&banco={{ request.GET.banco }}{% endif %}{% if request.GET.parcela %}&parcela={{ request.GET.parcela }}{% endif %}{% if request.GET.valor %}&valor={{ request.GET.valor }}{% endif %}{% if request.GET.observacao %}&observacao={{ request.GET.observacao }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <a class="page-btn" href="?page={{ page_obj.next_page_number }}{% if request.GET.conciliacao %}&conciliacao={{ request.GET.conciliacao }}{% endif %}{% if request.GET.data %}&data={{ request.GET.data }}{% endif %}{% if request.GET.fornecedor %}&fornecedor={{ request.GET.fornecedor }}{% endif %}{% if request.GET.categoria %}&categoria={{ request.GET.categoria }}{% endif %}{% if request.GET.banco %}&banco={{ request.GET.banco }}{% endif %}{% if request.GET.parcela %}&parcela={{ request.GET.parcela }}{% endif %}{% if request.GET.valor %}&valor={{ request.GET.valor }}{% endif %}{% if request.GET.observacao %}&observacao={{ request.GET.observacao }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">&raquo;</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+   {% include 'modal_pagamento.html' %}
+    <script src="{% static 'js/modal.js' %}"></script>
+
+    {% include 'modal_import_xlsx.html' %}
+    <script src="{% static 'js/import_xlsx.js' %}"> </script>
+
+    {% include 'modal_editar_registro.html' %}
+    <script src="{% static 'js/editar_registro.js' %}"></script>
+
+</body>
+</html>

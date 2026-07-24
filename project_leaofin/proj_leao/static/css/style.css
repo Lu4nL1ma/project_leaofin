@@ -1,0 +1,638 @@
+/* ==========================================================================
+   Reset e Configurações Base
+   ========================================================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background-color: #f8fafc;
+    color: #334155;
+    padding: 30px 20px;
+}
+
+/* ==========================================================================
+   Cabeçalho com Logo na Esquerda e Título Centralizado
+   ========================================================================== */
+.main-header {
+    max-width: 95%;
+    margin: 0 auto 20px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    min-height: 50px;
+    padding: 0 5px;
+}
+
+.main-header h1 {
+    font-size: 34px;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+    text-align: center;
+}
+
+.header-logo {
+    max-height: 45px;
+    width: auto;
+    object-fit: contain;
+    position: absolute;
+    left: 5px;
+}
+
+/* ==========================================================================
+   Container Principal (Dashboard Card)
+   ========================================================================== */
+.dashboard-card {
+    background-color: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    max-width: 95%;
+    margin: 0 auto;
+    overflow: hidden;
+}
+
+/* ==========================================================================
+   1. Barra de Filtros Geral (Alinhamentos Verticais e Redução de Padding)
+   ========================================================================== */
+.filter-section {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 12px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.filter-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin-top: 5px;
+}
+
+.filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+}
+
+.filter-field label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+}
+
+.filter-field input {
+    border: 1px solid #cbd5e1;
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 4px;
+    outline: none;
+    color: #1e293b;
+    transition: all 0.2s;
+    width: 100%;
+    max-width: 130px;
+    height: 28px;
+    text-align: center !important;
+    margin: 0 auto;
+}
+
+.filter-field input:focus {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+}
+
+.btn-filter {
+    background-color: #0f172a;
+    color: #ffffff;
+    border: none;
+    padding: 0 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 30px;
+    vertical-align: middle;
+}
+
+.btn-filter:hover {
+    background-color: #1e293b;
+}
+
+.btn-clear {
+    background-color: #64748b;
+}
+.btn-clear:hover {
+    background-color: #475569;
+}
+
+.btn-dropdown {
+    background-color: #0284c7;
+}
+.btn-dropdown:hover {
+    background-color: #0369a1;
+}
+
+/* ==========================================================================
+   Menu Suspenso (Dropdown de Ações)
+   ========================================================================== */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: #ffffff;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.1);
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    z-index: 100;
+    margin-top: 4px;
+    overflow: hidden;
+}
+
+.dropdown-content a {
+    color: #334155;
+    padding: 10px 16px;
+    text-decoration: none;
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.dropdown-content a:hover {
+    background-color: #f1f5f9;
+    color: #0284c7;
+}
+
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+
+/* ==========================================================================
+   2. Área da Tabela (Estilo Híbrido Grid 100% Centralizado)
+   ========================================================================== */
+.table-responsive {
+    overflow-x: auto;
+    width: 100%;
+}
+
+.hybrid-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 13px;
+}
+
+.hybrid-table th {
+    background-color: #f1f5f9;
+    color: #475569;
+    font-weight: 600;
+    border-bottom: 2px solid #cbd5e1;
+    border-right: 1px solid #e2e8f0;
+    padding: 10px 12px;
+    text-align: center !important;
+}
+
+.hybrid-table td {
+    border-right: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 8px 12px;
+    white-space: nowrap;
+    background-color: #ffffff;
+    color: #334155;
+    text-align: center !important;
+}
+
+.hybrid-table td.row-index {
+    background-color: #f8fafc;
+    color: #94a3b8;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 500;
+    border-right: 2px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    width: 45px;
+    user-select: none;
+}
+
+.hybrid-table th:last-child,
+.hybrid-table td:last-child {
+    border-right: none;
+}
+
+.col-obs {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #64748b;
+    font-style: italic;
+}
+
+.hybrid-table tbody tr:hover td:not(.row-index) {
+    background-color: #f8fafc;
+}
+
+.hybrid-table td:not(.row-index):hover {
+    outline: 2px solid #38bdf8;
+    outline-offset: -2px;
+}
+
+/* ==========================================================================
+   Forçadores de Alinhamento e Sobrescritas Utilitárias
+   ========================================================================== */
+.text-center {
+    text-align: center !important;
+}
+.text-center .filter-field input {
+    text-align: center !important;
+}
+
+.text-right {
+    text-align: center !important;
+}
+.text-right .filter-field input,
+.hybrid-table td.text-right,
+.hybrid-table th.text-right {
+    text-align: center !important;
+}
+
+/* ==========================================================================
+   3. Paginação do Dashboard
+   ========================================================================== */
+.pagination-section {
+    background-color: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: #64748b;
+}
+
+.page-buttons {
+    display: flex;
+    gap: 4px;
+}
+
+.page-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 6px;
+    border: 1px solid #e2e8f0;
+    background-color: #ffffff;
+    color: #475569;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.page-btn.active {
+    background-color: #0284c7;
+    color: white;
+    border-color: #0284c7;
+    font-weight: 600;
+}
+
+.page-btn:hover:not(.active) {
+    background-color: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+/* ==========================================================================
+   Botões de Ação da Tabela (Conciliação)
+   ========================================================================== */
+.btn-conci {
+    background-color: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 20px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.btn-conci:hover {
+    background-color: #dcfce7;
+    border-color: #86efac;
+    color: #15803d;
+}
+
+.btn-notconci {
+    background-color: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 20px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-notconci:hover {
+    background-color: #fee2e2;
+    border-color: #fca5a5;
+    color: #b91c1c;
+}
+
+/* ==========================================================================
+   Status Badges (Pílulas coloridas)
+   ========================================================================== */
+.status-badge {
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 20px;
+    display: inline-block;
+    text-align: center;
+}
+
+.status-pago {
+    background-color: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+}
+
+.status-pendente {
+    background-color: #fefce8;
+    color: #ca8a04;
+    border: 1px solid #fef08a;
+}
+
+.status-atrasado {
+    background-color: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+/* ==========================================================================
+   Modal -- estrutura compartilhada (overlay, botões de ação genéricos)
+   Usada tanto pelo modal de Registrar Pagamento (.modal-card) quanto pelo
+   modal de Editar Registro / Upload (.modal-box). As duas "caixas" têm
+   nomes de classe diferentes de propósito, pra poderem ter tamanhos e
+   paddings próprios sem conflitar -- mas overlay, header e os botões de
+   ação (cancelar/salvar) são únicos e compartilhados por todos os modais.
+   ========================================================================== */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(15, 23, 42, 0.55);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    color: #0f172a;
+}
+
+.modal-header h2 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+}
+
+.close-modal-btn,
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    color: #94a3b8;
+    padding: 0;
+}
+
+.close-modal-btn:hover,
+.modal-close:hover {
+    color: #475569;
+}
+
+.btn-cancelar,
+.btn-modal-cancel {
+    background: #f1f5f9;
+    color: #475569;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.btn-cancelar:hover,
+.btn-modal-cancel:hover {
+    background-color: #e2e8f0;
+}
+
+/* Botão de ação positiva dentro de qualquer modal (Salvar, Importar, etc.) */
+.btn-salvar-modal {
+    background-color: #0284c7;
+    color: #ffffff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    transition: background-color 0.2s ease;
+}
+
+.btn-salvar-modal:hover {
+    background-color: #0369a1;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* ---------- Modal de Registrar Pagamento (.modal-card) ---------- */
+.modal-card {
+    background: #ffffff;
+    padding: 24px;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+.modal-body {
+    margin-bottom: 20px;
+}
+
+.modal-body label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 8px;
+    text-align: left;
+}
+
+.modal-body select,
+.modal-body input {
+    width: 100%;
+    height: 36px;
+    padding: 0 8px;
+    border-radius: 4px;
+    border: 1px solid #cbd5e1;
+    outline: none;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+/* ---------- Modal de Editar Registro / Upload (.modal-box) ---------- */
+.modal-box {
+    background-color: #fff;
+    width: 90%;
+    max-width: 420px;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    padding: 24px;
+    animation: modalFadeIn 0.18s ease-out;
+}
+
+.modal-box-lg {
+    max-width: 560px;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(-12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.modal-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.modal-form-grid .full-width {
+    grid-column: 1 / -1;
+}
+
+.modal-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.modal-form-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.modal-form-group input,
+.modal-form-group select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 7px 10px;
+    font-size: 13px;
+    font-family: inherit;
+    line-height: 1.4;
+    border: 1px solid #dbe1e8;
+    border-radius: 5px;
+    color: #1e293b;
+    background-color: #fff;
+}
+
+.modal-form-group select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding-right: 28px;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%2364748b' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 12px;
+}
+
+.modal-form-group input:focus,
+.modal-form-group select:focus {
+    outline: none;
+    border-color: #4a90d9;
+}
+
+/* ==========================================================================
+   Efeito Artístico Premium - Verde Dinheiro / Cédula Real
+   ========================================================================== */
+.cash-green-premium {
+    background: linear-gradient(135deg, #115e59 0%, #16a34a 50%, #22c55e 100%) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    fill: url(#verdeDinheiro) #16a34a;
+    filter: drop-shadow(0px 1.5px 1px rgba(0, 0, 0, 0.4));
+    display: inline-block;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.cash-green-premium:hover {
+    transform: scale(1.2) translateY(-1.5px);
+    filter: drop-shadow(0px 3px 4px rgba(0, 0, 0, 0.5)) brightness(1.2);
+}
+
+[data-title]::after {
+    white-space: nowrap;
+    z-index: 99999 !important;
+}

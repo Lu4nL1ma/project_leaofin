@@ -1,0 +1,318 @@
+{% load static %}
+{% load mascaras_financeiras %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histórico e Conciliação de Pagamentos</title>
+    <!-- Bootstrap CSS para funcionamento correto dos Modais e Componentes -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        /* Painel de Indicadores Duplos */
+        .summary-container {
+            display: flex;
+            gap: 20px;
+            max-width: 95%;
+            margin: 0 auto 20px auto;
+        }
+        .summary-card-mini {
+            flex: 1;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            color: #ffffff;
+        }
+        .bg-conciliado { background: linear-gradient(135deg, #064e3b 0%, #059669 100%); }
+        .bg-pendente-alerta { 
+            background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); 
+            box-shadow: 0 0 12px rgba(249, 115, 22, 0.2);
+        }
+        
+        .summary-card-mini h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9; margin-bottom: 4px; font-weight: 600; }
+        .summary-card-mini p { font-size: 24px; font-weight: 700; }
+        
+        .btn-badge-alerta {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;          
+            padding: 8px 18px; 
+            font-size: 13px;    
+            font-weight: 600;
+            border-radius: 9999px; 
+            background-color: #fff7ed; 
+            color: #ea580c; 
+            border: 1px solid #ffedd5;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            font-family: inherit;
+            white-space: nowrap;
+        }
+        .btn-badge-alerta:hover {
+            background-color: #ffedd5;
+            border-color: #fed7aa;
+            transform: scale(1.03); 
+            box-shadow: 0 2px 4px rgba(234, 88, 12, 0.1);
+        }
+
+        .top-actions-container {
+            display: flex;
+            justify-content: center; 
+            align-items: center;     
+            width: 100%;
+            position: relative;      
+            margin-bottom: 15px;
+            min-height: 36px;        
+        }
+
+        .top-actions-container .filter-section {
+            margin: 0 auto !important; 
+            padding: 0; 
+            width: auto; 
+            box-shadow: none; 
+            background: transparent;
+        }
+
+        .btn-ofx-trigger {
+            position: absolute;
+            right: 0;                
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background-color: #1e293b;
+            color: #ffffff;
+            padding: 0 14px;
+            height: 30px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid #334155;
+            transition: background 0.2s;
+        }
+        .btn-ofx-trigger:hover { background-color: #334155; }
+
+        .hybrid-table th, .hybrid-table td { text-align: center !important; vertical-align: middle !important; }
+
+        /* 📊 ESTILIZAÇÃO DO MODAL INTELIGENTE DE AUDITORIA */
+        .modal-grande { max-width: 95% !important; width: 95% !important; }
+        
+        .conciliacao-split-container {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 20px;
+            margin-top: 10px;
+        }
+
+        .split-column {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 15px;
+            max-height: 500px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Paginação */
+        .pagination-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="main-header" style="position: relative; padding: 20px; text-align: center;">
+        <a href="{% url 'homes' %}" class="btn-filter btn-clear" style="position: absolute; left: 5px; height: 30px; padding: 0 12px; display: inline-flex; align-items: center; text-decoration: none;">&larr; Voltar</a>
+        <h1>Histórico de Conciliação</h1>
+    </header>
+
+    <div class="summary-container">
+        <div class="summary-card-mini bg-conciliado">
+            <h2>Total Conciliado (Histórico)</h2>
+            <p>{{ total_conciliado|moeda_br }}</p>
+        </div>
+        <div class="summary-card-mini bg-pendente-alerta">
+            <h2>Pendente de Conciliação</h2>
+            <p style="color: #ffffff;">{{ total_pendente|moeda_br }}</p>
+        </div>
+    </div>
+
+    <div class="dashboard-card" style="padding: 20px;">
+        <div class="top-actions-container">
+            <form method="GET" class="filter-section">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="filter-field" style="width: 250px; margin: 0;">
+                        <input type="text" name="fornecedor" value="{{ filtro_fornecedor|default:'' }}" placeholder="Buscar fornecedor no histórico..." style="max-width: 100% !important; text-align: center !important; height: 28px;">
+                    </div>
+                    <button type="submit" class="btn-filter" style="background-color: #0284c7; height: 30px; color: white; border: none; padding: 0 15px; border-radius: 4px;">Pesquisar</button>
+                    <a href="{{ request.path }}" class="btn-filter btn-clear" style="height: 30px; display: inline-flex; align-items: center; text-decoration: none;">Limpar</a>
+                </div>
+            </form>
+
+            <button type="button" class="btn-ofx-trigger" data-bs-toggle="modal" data-bs-target="#modalOfx">
+                <!-- CORREÇÃO 1: Tag svg fechada corretamente aqui abaixo -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-file-earmark-arrow-up" viewBox="0 0 16 16">
+                    <path d="M8.5 11.5a.5.5 0 0 1-1 0V7.707L6.354 8.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 7.707z"/>
+                    <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
+                </svg>
+                Importar OFX
+            </button>
+        </div>
+
+        <div class="table-responsive" style="margin-top: 5px;">
+            <table class="hybrid-table table">
+                <thead>
+                    <tr>
+                        <th style="width: 45px; background-color: #f8fafc;">#</th>
+                        <th>Data Pagamento</th>
+                        <th>Fornecedor</th>
+                        <th>Banco</th>
+                        <th>Valor Original</th>
+                        <th>Juros</th>
+                        <th>Status Conciliação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in page_obj %}
+                    <tr {% if item.id in ids_conciliados %}style="background-color: #f8fafc;"{% endif %}>
+                        <td class="row-index">{{ page_obj.start_index|add:forloop.counter0 }}</td>
+                        <td style="color: #0284c7; font-weight: 600;">{{ item.vencimento|date:"d/m/Y"|default:"-" }}</td>
+                        <td style="font-weight: 500;">{{ item.fornecedor }}</td>
+                        <td>{{ item.banco }}</td>
+                        <td>{{ item.valor|moeda_br }}</td>
+                        <td style="font-weight: 600; {% if item.juros > 0 %}color: #dc2626;{% endif %}">{{ item.juros|moeda_br|default:"R$ 0,00" }}</td>
+                        <td>
+                            {% if item.id in ids_conciliados %}
+                                <span class="status-badge" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 18px; background-color: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; border-radius: 9999px; font-size: 13px; font-weight: 600; white-space: nowrap;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>
+                                    Conciliado
+                                </span>
+                            {% else %}
+                                <form method="POST" action="{% url 'concili' item.id %}" style="margin: 0; display: inline-flex;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-badge-alerta">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-circle" viewBox="0 0 16 16">
+                                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                                            <path d="m10.97 4.97-.02.022-3.473 4.425-2.093-2.094a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05"/>
+                                        </svg>
+                                        Conciliar
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: #94a3b8; font-style: italic; padding: 40px;">Nenhum registro de pagamento encontrado.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ADICIONADO: Bloco de Paginação Inteligente protegendo o Filtro -->
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="pagination-container">
+            {% if page_obj.has_previous %}
+                <a href="?page=1&fornecedor={{ filtro_fornecedor|default:'' }}" class="btn btn-sm btn-outline-secondary">« Primeira</a>
+                <a href="?page={{ page_obj.previous_page_number }}&fornecedor={{ filtro_fornecedor|default:'' }}" class="btn btn-sm btn-outline-secondary">Anterior</a>
+            {% endif %}
+
+            <span class="small fw-semibold text-muted">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}&fornecedor={{ filtro_fornecedor|default:'' }}" class="btn btn-sm btn-outline-secondary">Próxima</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}&fornecedor={{ filtro_fornecedor|default:'' }}" class="btn btn-sm btn-outline-secondary">Última »</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 🏦 MODAL 1: SELEÇÃO DE ARQUIVOS -->
+    <div id="modalOfx" class="modal fade" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Validação de Importação Bancária</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <!-- IMPORTANTE: Adicionado enctype caso faça upload tradicional, embora use FormData no JS -->
+                <form id="formOfx" method="POST" action="{% url 'processar_ofx_ajax' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="modal-body d-flex flex-column gap-3">
+                        <div>
+                            <label for="ofxBanco" class="form-label fw-semibold text-secondary">Banco do Extrato:</label>
+                            <select id="ofxBanco" name="banco_destino" required class="form-select">
+                                <option value="" disabled selected>Selecione o banco de destino...</option>
+                                {% for banco in bancos_disponiveis %}
+                                    <option value="{{ banco.nome }}">{{ banco.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="ofxFile" class="form-label fw-semibold text-secondary">Arquivo Extrato (.OFX):</label>
+                            <!-- CORREÇÃO 2: Atributo name="arquivo_ofx" reinserido aqui abaixo -->
+                            <input type="file" id="ofxFile" name="arquivo_ofx" accept=".ofx" required class="form-control">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-dark" style="background-color: #1e293b;">Carregar Lançamentos</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📊 MODAL 2: PAINEL DE AUDITORIA INTELIGENTE -->
+    <div id="modalAuditoriaLote" class="modal fade" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-grande">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Painel de Conciliação - <span id="lblBancoAtivo" style="color: #0284c7;">-</span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="conciliacao-split-container">
+                        <!-- LADO ESQUERDO: EXTRATO -->
+                        <div>
+                            <h6 class="fw-bold text-secondary mb-2">Débitos do Extrato Bancário (OFX)</h6>
+                            <div id="containerTransacoesOfx" class="split-column"></div>
+                        </div>
+
+                        <!-- LADO DIREITO: COMBINAÇÕES -->
+                        <div>
+                            <h6 class="fw-bold text-secondary mb-2">Contas em Aberto no Sistema (Espelho)</h6>
+                            <div id="containerContasSistema" class="split-column"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" id="btnGravarLote" class="btn btn-success">Confirmar e Gravar Vínculos</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts Bootstrap Mandatórios para manipulação de Modais -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    // O Django traduz essa linha para "/conciliacao/gravar-lote/" (ou sua rota real)
+    window.urlGravarLote = "{% url 'gravar_conciliacao_lote' %}";
+    </script>
+    <script src="{% static 'js/ofx.js' %}"></script>
+        
+</body>
+</html>

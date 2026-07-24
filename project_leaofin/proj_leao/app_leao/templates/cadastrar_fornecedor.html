@@ -1,0 +1,145 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastrar Fornecedor</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        /* Reutilizando a identidade visual do seu sistema */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 6px;
+        }
+
+        .form-group input, .form-group select {
+            padding: 8px 12px;
+            font-size: 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            border-color: #0284c7;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 10px;
+            border-top: 1px solid #f1f5f9;
+            padding-top: 15px;
+        }
+
+        /* Alertas de Mensagem do Django */
+        .alert {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .alert-success { background-color: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+        .alert-error { background-color: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; }
+    </style>
+</head>
+<body>
+
+    <header class="main-header">
+        <a href="{% url 'homes' %}" class="btn-filter btn-clear" style="position: absolute; left: 5px; height: 30px; padding: 0 12px;">&larr; Voltar</a>
+        <h1>Novo Fornecedor</h1>
+    </header>
+
+    <div class="dashboard-card" style="max-width: 800px; margin: 20px auto; padding: 25px;">
+        
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="POST" autocomplete="off">
+            {% csrf_token %}
+            
+            <h3 style="margin-top: 0; margin-bottom: 15px; color: #0f172a; font-size: 16px;">Dados Cadastrais</h3>
+            <div class="form-grid">
+                <div class="form-group" style="grid-column: span 2;">
+                    <label for="razao_social">Razão Social *</label>
+                    <input type="text" id="razao_social" name="razao_social" value="{{ dados.razao_social|default:'' }}" required placeholder="Ex: Empresa de Alimentos LTDA">
+                </div>
+                <div class="form-group">
+                    <label for="cnpj">CNPJ *</label>
+                    <input type="text" id="cnpj" name="cnpj" value="{{ dados.cnpj|default:'' }}" required placeholder="00.000.000/0000-00" maxlength="18">
+                </div>
+                <div class="form-group" style="grid-column: span 2;">
+                    <label for="nome_fantasia">Nome Fantasia</label>
+                    <input type="text" id="nome_fantasia" name="nome_fantasia" value="{{ dados.nome_fantasia|default:'' }}" placeholder="Ex: Mercado Central">
+                </div>
+            </div>
+
+            <h3 style="margin-bottom: 15px; color: #0f172a; font-size: 16px;">Contato</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="email">E-mail</label>
+                    <input type="email" id="email" name="email" value="{{ dados.email|default:'' }}" placeholder="financeiro@fornecedor.com">
+                </div>
+                <div class="form-group">
+                    <label for="telefone">Telefone</label>
+                    <input type="text" id="telefone" name="telefone" value="{{ dados.telefone|default:'' }}" placeholder="(00) 00000-0000">
+                </div>
+            </div>
+
+            <h3 style="margin-bottom: 15px; color: #0f172a; font-size: 16px;">Endereço</h3>
+            <div class="form-grid">
+                <div class="form-group" style="grid-column: span 2;">
+                    <label for="logradouro">Logradouro / Número</label>
+                    <input type="text" id="logradouro" name="logradouro" value="{{ dados.logradouro|default:'' }}" placeholder="Rua, Av, Número, Bloco...">
+                </div>
+                <div class="form-group">
+                    <label for="cidade">Cidade</label>
+                    <input type="text" id="cidade" name="cidade" value="{{ dados.cidade|default:'' }}" placeholder="Cidade">
+                </div>
+                <div class="form-group" style="max-width: 120px;">
+                    <label for="estado">UF</label>
+                    <input type="text" id="estado" name="estado" value="{{ dados.estado|default:'' }}" placeholder="SP" maxlength="2" style="text-transform: uppercase;">
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a href="{% url 'homes' %}" class="btn-filter btn-clear" style="height: 34px; line-height: 34px; padding: 0 20px; text-decoration: none; display: inline-block; background-color: #f1f5f9; color: #475569;">Cancelar</a>
+                <button type="submit" class="btn-filter" style="background-color: #0284c7; height: 36px; padding: 0 24px; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">Salvar Fornecedor</button>
+            </div>
+        </form>
+
+    </div>
+
+    <script>
+        document.getElementById('cnpj').addEventListener('input', function (e) {
+            var x = e.target.value.replace(/\D/g, '').match(/(\d{0,2})(\d{0,3})(\d{0,3})(\d{0,4})(\d{0,2})/);
+            e.target.value = !x[2] ? x[1] : x[1] + '.' + x[2] + '.' + x[3] + '/' + x[4] + (x[5] ? '-' + x[5] : '');
+        });
+    </script>
+
+</body>
+</html>

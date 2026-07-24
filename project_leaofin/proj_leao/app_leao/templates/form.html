@@ -1,0 +1,258 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro Financeiro</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        /* Base de Layout do Painel */
+        body {
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        /* Topo Isolado e Organizado */
+        .header-navegacao {
+            display: flex;
+            align-items: center;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 0 24px;
+            height: 60px;
+        }
+
+        .btn-voltar-topo {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #475569;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 8px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background-color: #ffffff;
+            transition: all 0.15s ease-in-out;
+        }
+
+        .btn-voltar-topo:hover {
+            background-color: #f1f5f9;
+            color: #1e293b;
+            border-color: #94a3b8;
+        }
+
+        /* Container Centralizado do Formulário */
+        .painel-cadastro {
+            max-width: 520px;
+            margin: 40px auto;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 32px;
+        }
+
+        .painel-titulo {
+            font-size: 22px;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0 0 6px 0;
+            text-align: center;
+        }
+
+        .painel-subtitulo {
+            font-size: 13px;
+            color: #64748b;
+            text-align: center;
+            margin: 0 0 28px 0;
+        }
+
+        /* Estrutura dos Campos de Input e Select */
+        .campo-grupo {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 20px;
+        }
+
+        .campo-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .seletor-custom, .input-custom {
+            width: 100%;
+            height: 40px;
+            padding: 0 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background-color: #ffffff;
+            font-size: 14px;
+            color: #1e293b;
+            outline: none;
+            box-sizing: border-box;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .seletor-custom:focus, .input-custom:focus {
+            border-color: #0284c7;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+        }
+
+        .seletor-custom {
+            cursor: pointer;
+        }
+
+        /* Botão Principal de Ação */
+        .btn-salvar-registro {
+            width: 100%;
+            height: 44px;
+            background-color: #1e293b;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: background-color 0.15s;
+        }
+
+        .btn-salvar-registro:hover {
+            background-color: #0f172a;
+        }
+
+        /* Alertas do Django */
+        .lista-mensagens {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 20px 0;
+        }
+        .lista-mensagens li {
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .lista-mensagens li.success { background-color: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+        .lista-mensagens li.error { background-color: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    </style>
+</head>
+<body>
+
+    <!-- ⬅️ BOTÃO DE VOLTAR TOTALMENTE ISOLADO NO TOPO -->
+    <header class="header-navegacao">
+        <a href="{% url 'homes' %}" class="btn-voltar-topo">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 13L5 8L10 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Voltar
+        </a>
+    </header>
+
+    <div class="painel-cadastro">
+        
+        <h2 class="painel-titulo">Novo Lançamento</h2>
+        <p class="painel-subtitulo">Selecione os parâmetros reais homologados no banco de dados.</p>
+
+        {% if messages %}
+        <ul class="lista-mensagens">
+            {% for message in messages %}
+            <li class="{{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <!-- 👤 SELECT 1: FORNECEDORES REAIS -->
+            <div class="campo-grupo">
+                <label for="id_fornecedor" class="campo-label">Fornecedor:</label>
+                <select id="id_fornecedor" name="fornecedor" class="seletor-custom" required>
+                    <option value="" disabled selected>Selecione um fornecedor existente...</option>
+                    {% for forn in proveedores|default:fornecedores %}
+                        <option value="{{ forn }}">{{ forn }}</option>
+                    {% empty %}
+                        <option value="" disabled>Nenhum fornecedor localizado no banco de dados.</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- 🏷️ SELECT 2: CATEGORIAS REAIS -->
+            <div class="campo-grupo">
+                <label for="id_categoria" class="campo-label">Categoria da Despesa:</label>
+                <select id="id_categoria" name="categoria" class="seletor-custom" required>
+                    <option value="" disabled selected>Selecione a classificação de custo...</option>
+                        {% regroup categorias by grupo as grupos_agrupados %}
+
+                            {% for grupo in grupos_agrupados %}
+                                <optgroup label="{{ grupo.grouper|upper }}">
+                                    
+                                    {% for cat in grupo.list %}
+                                        
+                                        {% if cat.nome|length < 5 %}
+                                            <option value="{{ cat.nome }}">{{ cat.nome|upper }}</option>
+                                        {% else %}
+                                            <option value="{{ cat.nome }}">{{ cat.nome }} </option>
+                                        {% endif %}
+                                        
+                                    {% endfor %}
+                                    
+                                </optgroup>
+                            {% empty %}
+                                <option value="" disabled>Nenhuma categoria localizada. Cadastre-as no Admin.</option>
+                            {% endfor %}
+                </select>
+            </div>
+
+            <!-- 🏦 SELECT 3: BANCOS REAIS -->
+            <div class="campo-grupo">
+                <label for="id_banco" class="campo-label">Banco de Origem:</label>
+                <select id="id_banco" name="banco" class="seletor-custom" required>
+                    <option value="" disabled selected>Selecione a conta de saída...</option>
+                    {% for bco in bancos %}
+                        <option value="{{ bco }}">{{ bco }}</option>
+                    {% empty %}
+                        <option value="" disabled>Nenhum banco identificado nas transações anteriores.</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- 📅 INPUT: VENCIMENTO MANUAL -->
+            <div class="campo-grupo">
+                <label for="id_vencimento_manual" class="campo-label">Data de Vencimento:</label>
+                <input type="date" id="id_vencimento_manual" name="vencimento_manual" class="input-custom" required>
+            </div>
+
+            <!-- 📊 SELECT 4: PARCELAMENTO DINÂMICO -->
+            <div class="campo-grupo">
+                <label for="id_parcela" class="campo-label">Número de Parcelas:</label>
+                <select id="id_parcela" name="parcela" class="seletor-custom" required>
+                    {% for parc in opcoes_parcelas %}
+                        <option value="{{ parc }}">{{ parc}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- 💰 INPUT 5: VALOR CRU -->
+            <div class="campo-grupo">
+                <label for="id_valor" class="campo-label">Valor do Registro (R$):</label>
+                <input type="number" step="0.01" id="id_valor" name="valor" class="input-custom" required placeholder="0,00">
+            </div>
+
+            <button type="submit" class="btn-salvar-registro">
+                Registrar Lançamento
+            </button>
+        </form>
+
+    </div>
+
+</body>
+</html>
