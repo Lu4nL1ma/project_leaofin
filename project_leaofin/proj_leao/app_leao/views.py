@@ -625,107 +625,132 @@ def salvar_conciliacao_lote(request):
 
 
 def importar_xlsx(request):
-    if request.method == 'POST' and request.FILES.get('arquivo_xlsx'):
-        arquivo = request.FILES['arquivo_xlsx']
-        
-        try:
-            wb = openpyxl.load_workbook(arquivo, read_only=True, data_only=True)
-            sheet = wb.active
+    if 'arquivo_xlsx' not in request.FILES:
+        return JsonResponse({'sucesso': False, 'erro': 'Nenhum arquivo enviado.'}, status=400)
 
-            fornecedores_cache = {f.razao_social.upper().strip(): f for f in Fornecedor.objects.all()}
-            bancos_cache = {b.nome.upper().strip(): b for b in BancoSaldo.objects.all()}
-            categorias_cache = {c.nome.upper().strip(): c for c in Categoria.objects.all()}
+    excel_file = request.FILES['arquivo_xlsx']
 
-            novos_registros = []
-            erros_detalhados = []
-            linhas_ignoradas_por_duplicacao = 0
+    try:
+        wb = openpyxl.load_workbook(excel_file, data_only=True)
+        sheet = wb.active
+    except Exception as e:
+        return JsonResponse({'sucesso': False, 'erro': f'Erro ao ler o arquivo Excel: {str(e)}'}, status=400)
 
-            for idx, row in enumerate(sheet.iter_rows(values_only=True), start=1):
-                if idx == 1 or not any(row):
-                    continue
+    rows = list(sheet.iter_rows(values_only=True))
+    if not rows or len(rows) < 2:
+        return JsonResponse({'sucesso': False, 'erro': 'A planilha está vazia ou não possui dados suficientes.'}, status=400)
 
-                num_documento, nome_fornecedor, nome_banco, nome_categoria, valor_raw, data_raw = row[:6]
+    # 1. Normalização dos Cabeçalhos (Linha 1)
+    headers = [str(cell).strip().lower() if cell is not None else '' for cell in rows[0]]
 
-                # 1. Validação de Relacionamentos
-                fornecedor_key = str(nome_fornecedor).upper().strip() if nome_fornecedor else ''
-                banco_key = str(nome_banco).upper().strip() if nome_banco else ''
-                categoria_key = str(nome_categoria).upper().strip() if nome_categoria else ''
+    # Função auxiliar para localizar o índice da coluna aceitando variações de nomes
+    def get_col_index(possible_names):
+        for name in possible_names:
+            if name in headers:
+                return headers.index(name)
+        return None
 
-                obj_fornecedor = fornecedores_cache.get(fornecedor_key)
-                obj_banco = bancos_cache.get(banco_key)
-                obj_categoria = categorias_cache.get(categoria_key)
+    # Mapeamento dos índices com base nos cabeçalhos
+    idx_fornecedor = get_col_index(['fornecedor', 'razão social', 'razao social', 'razao_social'])
+    idx_banco      = get_col_index(['banco', 'conta', 'banco/saldo', 'bancosaldo'])
+    idx_categoria  = get_col_index(['categoria', 'classificação', 'classificacao'])
+    idx_valor      = get_col_index(['valor', 'valor (r$)', 'valorpago'])
+    idx_vencimento = get_col_index(['vencimento', 'data vencimento', 'dt_vencimento'])
 
-                if not obj_fornecedor or not obj_banco or not obj_categoria:
-                    faltantes = []
-                    if not obj_fornecedor: faltantes.append(f"Fornecedor '{nome_fornecedor}'")
-                    if not obj_banco: faltantes.append(f"Banco '{nome_banco}'")
-                    if not obj_categoria: faltantes.append(f"Categoria '{nome_categoria}'")
-                    
-                    erros_detalhados.append(f"Linha {idx}: Não cadastrado(s) -> {', '.join(faltantes)}.")
-                    continue
+    # Validação mínima dos cabeçalhos obrigatórios
+    if idx_fornecedor is None or idx_banco is None or idx_categoria is None:
+        return JsonResponse({
+            'sucesso': False, 
+            'erro': 'Cabeçalhos não identificados. Certifique-se de que a planilha possui colunas para Fornecedor, Banco e Categoria.'
+        }, status=400)
 
-                # 2. Normalização de Valor e Data
-                try:
-                    if isinstance(valor_raw, (int, float, Decimal)):
-                        valor = Decimal(str(valor_raw))
-                    else:
-                        valor_str = str(valor_raw).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                        valor = Decimal(valor_str)
-                except (InvalidOperation, TypeError, ValueError):
-                    erros_detalhados.append(f"Linha {idx}: Valor inválido '{valor_raw}'.")
-                    continue
+    # 2. Caching em memória para otimizar a performance da validação
+    # Busca por 'razao_social' para o modelo Fornecedor
+    fornecedores_cache = {
+        f.razao_social.strip().lower(): f 
+        for f in Fornecedor.objects.all() if f.razao_social
+    }
+    
+    bancos_cache = {
+        b.nome.strip().lower(): b 
+        for b in BancoSaldo.objects.all() if getattr(b, 'nome', None)
+    }
+    
+    categorias_cache = {
+        c.nome.strip().lower(): c 
+        for c in Categoria.objects.all() if getattr(c, 'nome', None)
+    }
 
-                data = None
-                if isinstance(data_raw, datetime):
-                    data = data_raw.date()
-                elif isinstance(data_raw, date):
-                    data = data_raw
-                elif isinstance(data_raw, str):
-                    try:
-                        data = datetime.strptime(data_raw.strip(), '%d/%m/%Y').date()
-                    except ValueError:
-                        try:
-                            data = datetime.strptime(data_raw.strip(), '%Y-%m-%d').date()
-                        except ValueError:
-                            pass
+    novas_contas = []
+    erros = []
+    importados_count = 0
+    duplicados_count = 0
 
-                if not data:
-                    erros_detalhados.append(f"Linha {idx}: Data inválida '{data_raw}'.")
-                    continue
+    # 3. Processamento Linha por Linha (Começando da linha 2)
+    for index, row in enumerate(rows[1:], start=2):
+        # Ignora linhas totalmente vazias
+        if not any(row):
+            continue
 
-                # 3. Validação de Duplicidade
-                if ContaPagar.objects.filter(numero_documento=num_documento, fornecedor=obj_fornecedor, valor=valor).exists():
-                    linhas_ignoradas_por_duplicacao += 1
-                    continue
+        raw_fornecedor = str(row[idx_fornecedor]).strip() if row[idx_fornecedor] is not None else ''
+        raw_banco      = str(row[idx_banco]).strip() if row[idx_banco] is not None else ''
+        raw_categoria  = str(row[idx_categoria]).strip() if row[idx_categoria] is not None else ''
+        val_valor      = row[idx_valor] if idx_valor is not None else 0
+        val_vencimento = row[idx_vencimento] if idx_vencimento is not None else None
 
-                novos_registros.append(
-                    ContaPagar(
-                        numero_documento=num_documento,
-                        fornecedor=obj_fornecedor,
-                        banco=obj_banco,
-                        categoria=obj_categoria,
-                        valor=valor,
-                        data=data
-                    )
-                )
+        # Validação de Relacionamentos (Foreign Keys)
+        obj_fornecedor = fornecedores_cache.get(raw_fornecedor.lower())
+        obj_banco      = bancos_cache.get(raw_banco.lower())
+        obj_categoria  = categorias_cache.get(raw_categoria.lower())
 
-            # 4. Salvamento em Lote
-            if novos_registros:
-                ContaPagar.objects.bulk_create(novos_registros)
+        faltantes = []
+        if not obj_fornecedor:
+            faltantes.append(f"Fornecedor '{raw_fornecedor}'")
+        if not obj_banco:
+            faltantes.append(f"Banco '{raw_banco}'")
+        if not obj_categoria:
+            faltantes.append(f"Categoria '{raw_categoria}'")
 
-            # Resposta JSON tratada
-            return JsonResponse({
-                'sucesso': True,
-                'importados': len(novos_registros),
-                'duplicados': linhas_ignoradas_por_duplicacao,
-                'erros': erros_detalhados
-            })
+        if faltantes:
+            erros.append(f"Linha {index}: Não cadastrado(s) -> {', '.join(faltantes)}.")
+            continue
 
-        except Exception as e:
-            return JsonResponse({'sucesso': False, 'erro': f"Erro ao ler a planilha: {str(e)}"}, status=400)
+        # Check de Duplicidade no banco de dados
+        ja_existe = ContaPagar.objects.filter(
+            fornecedor=obj_fornecedor,
+            banco=obj_banco,
+            categoria=obj_categoria,
+            valor=val_valor,
+            data_vencimento=val_vencimento
+        ).exists()
 
-    return JsonResponse({'sucesso': False, 'erro': "Requisição inválida."}, status=400)
+        if ja_existe:
+            duplicados_count += 1
+            continue
 
+        # Monta o objeto para inserção em lote
+        novas_contas.append(
+            ContaPagar(
+                fornecedor=obj_fornecedor,
+                banco=obj_banco,
+                categoria=obj_categoria,
+                valor=val_valor,
+                data_vencimento=val_vencimento
+            )
+        )
+        importados_count += 1
+
+    # 4. Inserção em Massa no Banco de Dados
+    if novas_contas:
+        with transaction.atomic():
+            ContaPagar.objects.bulk_create(novas_contas)
+
+    return JsonResponse({
+        'sucesso': True,
+        'importados': importados_count,
+        'duplicados': duplicados_count,
+        'erros': erros
+    })
 
 def baixar_planilha_padrao(request):
     workbook = Workbook()
