@@ -58,7 +58,7 @@ body {
 }
 
 /* ==========================================================================
-   1. Barra de Filtros Geral (Alinhamentos Verticais e Redução de Padding)
+   1. Barra de Filtros Geral
    ========================================================================== */
 .filter-section {
     background-color: #ffffff;
@@ -191,7 +191,7 @@ body {
 }
 
 /* ==========================================================================
-   2. Área da Tabela (Estilo Híbrido Grid 100% Centralizado)
+   2. Área da Tabela
    ========================================================================== */
 .table-responsive {
     overflow-x: auto;
@@ -260,7 +260,7 @@ body {
 }
 
 /* ==========================================================================
-   Forçadores de Alinhamento e Sobrescritas Utilitárias
+   Utilitários de Alinhamento
    ========================================================================== */
 .text-center {
     text-align: center !important;
@@ -325,7 +325,7 @@ body {
 }
 
 /* ==========================================================================
-   Botões de Ação da Tabela (Conciliação)
+   Botões de Conciliação e Status Badges
    ========================================================================== */
 .btn-conci {
     background-color: #f0fdf4;
@@ -371,9 +371,6 @@ body {
     color: #b91c1c;
 }
 
-/* ==========================================================================
-   Status Badges (Pílulas coloridas)
-   ========================================================================== */
 .status-badge {
     padding: 4px 12px;
     font-size: 12px;
@@ -402,18 +399,14 @@ body {
 }
 
 /* ==========================================================================
-   Modal -- estrutura compartilhada (overlay, botões de ação genéricos)
-   Usada tanto pelo modal de Registrar Pagamento (.modal-card) quanto pelo
-   modal de Editar Registro / Upload (.modal-box). As duas "caixas" têm
-   nomes de classe diferentes de propósito, pra poderem ter tamanhos e
-   paddings próprios sem conflitar -- mas overlay, header e os botões de
-   ação (cancelar/salvar) são únicos e compartilhados por todos os modais.
+   Modais - Estrutura Base
    ========================================================================== */
 .modal-overlay {
     display: none;
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(15, 23, 42, 0.55);
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background-color: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(3px);
     z-index: 2000;
     align-items: center;
     justify-content: center;
@@ -429,29 +422,35 @@ body {
     align-items: center;
     margin-bottom: 16px;
     color: #0f172a;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 12px;
 }
 
-.modal-header h2 {
-    font-size: 16px;
+.modal-header h2,
+.modal-header h3 {
+    font-size: 18px;
     font-weight: 700;
     color: #1e293b;
     margin: 0;
 }
 
 .close-modal-btn,
-.modal-close {
+.modal-close,
+.btn-close-modal {
     background: none;
     border: none;
-    font-size: 22px;
+    font-size: 24px;
     line-height: 1;
     cursor: pointer;
     color: #94a3b8;
     padding: 0;
+    transition: color 0.2s;
 }
 
 .close-modal-btn:hover,
-.modal-close:hover {
-    color: #475569;
+.modal-close:hover,
+.btn-close-modal:hover {
+    color: #e53e3e;
 }
 
 .btn-cancelar,
@@ -459,11 +458,12 @@ body {
     background: #f1f5f9;
     color: #475569;
     border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
+    padding: 9px 18px;
+    border-radius: 6px;
     cursor: pointer;
     font-weight: 600;
     font-size: 13px;
+    transition: background-color 0.2s;
 }
 
 .btn-cancelar:hover,
@@ -471,13 +471,12 @@ body {
     background-color: #e2e8f0;
 }
 
-/* Botão de ação positiva dentro de qualquer modal (Salvar, Importar, etc.) */
 .btn-salvar-modal {
     background-color: #0284c7;
     color: #ffffff;
     border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
+    padding: 9px 18px;
+    border-radius: 6px;
     cursor: pointer;
     font-weight: 600;
     font-size: 13px;
@@ -488,20 +487,25 @@ body {
     background-color: #0369a1;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-/* ---------- Modal de Registrar Pagamento (.modal-card) ---------- */
+/* Modal Normal (Reg. Pagamento) */
 .modal-card {
     background: #ffffff;
     padding: 24px;
-    border-radius: 8px;
-    width: 100%;
-    max-width: 400px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-    animation: fadeIn 0.2s ease-in-out;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 420px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+}
+
+/* Modal Expandido para Importação XLSX */
+.modal-card-upload {
+    background: #ffffff;
+    padding: 28px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 650px; /* Largura expandida para caber os resultados */
+    min-height: 350px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
 }
 
 .modal-body {
@@ -520,20 +524,22 @@ body {
 .modal-body select,
 .modal-body input {
     width: 100%;
-    height: 36px;
-    padding: 0 8px;
-    border-radius: 4px;
+    height: 38px;
+    padding: 0 10px;
+    border-radius: 6px;
     border: 1px solid #cbd5e1;
     outline: none;
 }
 
-.modal-footer {
+.modal-footer,
+.modal-actions {
     display: flex;
     justify-content: flex-end;
     gap: 12px;
+    margin-top: 20px;
 }
 
-/* ---------- Modal de Editar Registro / Upload (.modal-box) ---------- */
+/* Modal Box Genérico */
 .modal-box {
     background-color: #fff;
     width: 90%;
@@ -541,23 +547,10 @@ body {
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.2);
     padding: 24px;
-    animation: modalFadeIn 0.18s ease-out;
 }
 
 .modal-box-lg {
     max-width: 560px;
-}
-
-@keyframes modalFadeIn {
-    from { opacity: 0; transform: translateY(-12px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
 }
 
 .modal-form-grid {
@@ -588,33 +581,126 @@ body {
     box-sizing: border-box;
     padding: 7px 10px;
     font-size: 13px;
-    font-family: inherit;
-    line-height: 1.4;
     border: 1px solid #dbe1e8;
     border-radius: 5px;
     color: #1e293b;
     background-color: #fff;
 }
 
-.modal-form-group select {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    padding-right: 28px;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%2364748b' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 8px center;
-    background-size: 12px;
+/* ==========================================================================
+   Área de Importação XLSX (Dropzone, Passos e Resultados)
+   ========================================================================== */
+.modal-dropzone {
+    border: 2px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 35px 20px;
+    text-align: center;
+    background-color: #f8fafc;
+    transition: all 0.2s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    color: #64748b;
+    cursor: pointer;
 }
 
-.modal-form-group input:focus,
-.modal-form-group select:focus {
-    outline: none;
-    border-color: #4a90d9;
+.modal-dropzone:hover {
+    border-color: #0284c7;
+    background-color: #f0f9ff;
+    color: #0369a1;
+}
+
+.modal-file-name {
+    margin-top: 10px;
+    font-weight: 700;
+    color: #0284c7;
+    font-size: 14px;
+}
+
+/* Transição de Passos */
+.modal-step {
+    width: 100%;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.modal-step.fade-in {
+    animation: fadeInModal 0.35s ease-in-out forwards;
+}
+
+@keyframes fadeInModal {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Cards de Resumo dos Resultados */
+.import-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.summary-card {
+    padding: 16px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.summary-card.success {
+    background-color: #e6f4ea;
+    border: 1px solid #ceead6;
+    color: #137333;
+}
+
+.summary-card.info {
+    background-color: #e8f0fe;
+    border: 1px solid #d2e3fc;
+    color: #1a73e8;
+}
+
+.summary-card .number {
+    font-size: 28px;
+    font-weight: 700;
+    display: block;
+}
+
+.summary-card .label {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Caixa de Erros com Scroll */
+.error-list-container {
+    background-color: #fef7e0;
+    border: 1px solid #feefc3;
+    border-radius: 8px;
+    padding: 14px;
+    max-height: 180px;
+    overflow-y: auto;
+    font-size: 13px;
+    color: #b06000;
+}
+
+.error-list-container ul {
+    margin: 8px 0 0 0;
+    padding-left: 20px;
+}
+
+.error-list-container li {
+    margin-bottom: 4px;
 }
 
 /* ==========================================================================
-   Efeito Artístico Premium - Verde Dinheiro / Cédula Real
+   Efeito Artístico Premium - Verde Dinheiro
    ========================================================================== */
 .cash-green-premium {
     background: linear-gradient(135deg, #115e59 0%, #16a34a 50%, #22c55e 100%) !important;
@@ -635,152 +721,4 @@ body {
 [data-title]::after {
     white-space: nowrap;
     z-index: 99999 !important;
-}/* Animação e Controle de Passos do Modal */
-.modal-step {
-    transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.modal-step.fade-in {
-    animation: fadeInModal 0.35s forwards;
-}
-
-@keyframes fadeInModal {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Grids de Resumo / Estatísticas */
-.import-summary-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin-bottom: 16px;
-}
-
-.summary-card {
-    padding: 12px;
-    border-radius: 8px;
-    text-align: center;
-}
-
-.summary-card.success {
-    background-color: #e6f4ea;
-    border: 1px solid #ceead6;
-    color: #137333;
-}
-
-.summary-card.info {
-    background-color: #e8f0fe;
-    border: 1px solid #d2e3fc;
-    color: #1a73e8;
-}
-
-.summary-card .number {
-    font-size: 22px;
-    font-weight: bold;
-    display: block;
-}
-
-.summary-card .label {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-/* Caixa de Erros Detalhados com Scroll */
-.error-list-container {
-    background-color: #fef7e0;
-    border: 1px solid #feefc3;
-    border-radius: 8px;
-    padding: 12px;
-    max-height: 160px;
-    overflow-y: auto;
-    font-size: 13px;
-    color: #b06000;
-}
-
-.error-list-container ul {
-    margin: 8px 0 0 0;
-    padding-left: 20px;
-}
-
-/* Animação e Controle de Passos do Modal */
-.modal-step {
-    transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.modal-step.fade-in {
-    animation: fadeInModal 0.35s forwards;
-}
-
-@keyframes fadeInModal {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Grids de Resumo / Estatísticas */
-.import-summary-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin-bottom: 16px;
-}
-
-.summary-card {
-    padding: 12px;
-    border-radius: 8px;
-    text-align: center;
-}
-
-.summary-card.success {
-    background-color: #e6f4ea;
-    border: 1px solid #ceead6;
-    color: #137333;
-}
-
-.summary-card.info {
-    background-color: #e8f0fe;
-    border: 1px solid #d2e3fc;
-    color: #1a73e8;
-}
-
-.summary-card .number {
-    font-size: 22px;
-    font-weight: bold;
-    display: block;
-}
-
-.summary-card .label {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-/* Caixa de Erros Detalhados com Scroll */
-.error-list-container {
-    background-color: #fef7e0;
-    border: 1px solid #feefc3;
-    border-radius: 8px;
-    padding: 12px;
-    max-height: 160px;
-    overflow-y: auto;
-    font-size: 13px;
-    color: #b06000;
-}
-
-.error-list-container ul {
-    margin: 8px 0 0 0;
-    padding-left: 20px;
 }
