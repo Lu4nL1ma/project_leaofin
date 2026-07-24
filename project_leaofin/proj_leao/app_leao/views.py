@@ -58,6 +58,29 @@ def tela_login(request):
     return render(request, 'login.html')
 
 
+def normalizar_data(val):
+    """ Converte o valor retornado pelo openpyxl em um objeto datetime.date """
+    if not val:
+        return None
+    
+    # Se o openpyxl já retornou como datetime ou date
+    if isinstance(val, datetime):
+        return val.date()
+    if isinstance(val, date):
+        return val
+
+    # Se veio como string, tenta converter nos formatos mais comuns
+    if isinstance(val, str):
+        val = val.strip()
+        for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
+            try:
+                return datetime.strptime(val, fmt).date()
+            except ValueError:
+                pass
+                
+    return None
+
+
 def login_usuario(request):
     if request.method == "POST":
         usuario_post = request.POST.get("username")
@@ -685,8 +708,12 @@ def importar_xlsx(request):
         raw_fornecedor = str(row[idx_fornecedor]).strip() if row[idx_fornecedor] is not None else ''
         raw_banco      = str(row[idx_banco]).strip() if row[idx_banco] is not None else ''
         raw_categoria  = str(row[idx_categoria]).strip() if row[idx_categoria] is not None else ''
+        
         val_valor      = row[idx_valor] if idx_valor is not None else 0
-        val_vencimento = row[idx_vencimento] if idx_vencimento is not None else None
+        raw_vencimento = row[idx_vencimento] if idx_vencimento is not None else None
+        
+        # Converte a data para um objeto datetime.date seguro
+        val_vencimento = normalizar_data(raw_vencimento)
 
         # Busca nos Caches
         obj_fornecedor = fornecedores_cache.get(raw_fornecedor.lower())
@@ -706,7 +733,7 @@ def importar_xlsx(request):
             erros.append(f"Linha {index}: Não cadastrado(s) -> {', '.join(faltantes)}.")
             continue
 
-        # Checagem de Duplicidade (Campo 'vencimento' corrigido)
+        # Checagem de Duplicidade
         ja_existe = ContaPagar.objects.filter(
             fornecedor=obj_fornecedor,
             banco=obj_banco,
@@ -719,7 +746,7 @@ def importar_xlsx(request):
             duplicados_count += 1
             continue
 
-        # Criação do Objeto em Memória (Campo 'vencimento' corrigido)
+        # Criação do Objeto em Memória
         novas_contas.append(
             ContaPagar(
                 fornecedor=obj_fornecedor,
