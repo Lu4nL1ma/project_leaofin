@@ -37,7 +37,8 @@ try:
     from ofxtools.Parser import OFXTree
 except ImportError:
     OFXTree = None
-
+    
+from django.views.decorators.http import require_POST
 
 # Status válidos direto do model, usado na importação de XLSX
 # (evita repetir a lista "Pendente"/"Pago" na mão em vários lugares)
@@ -623,7 +624,7 @@ def salvar_conciliacao_lote(request):
 
     return JsonResponse({'success': False, 'error': 'Método não permitido.'})
 
-
+@require_POST
 def importar_xlsx(request):
     if 'arquivo_xlsx' not in request.FILES:
         return JsonResponse({'sucesso': False, 'erro': 'Nenhum arquivo enviado.'}, status=400)
