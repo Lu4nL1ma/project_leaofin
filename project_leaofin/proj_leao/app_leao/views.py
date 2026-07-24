@@ -3,10 +3,8 @@ import json
 from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from decimal import Decimal, InvalidOperation
-
 import openpyxl
 from openpyxl import Workbook
-
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.core.paginator import Paginator
@@ -23,7 +21,6 @@ from django.db.models.functions import Coalesce
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-
 from app_leao.models import (
     BancoSaldo,
     Categoria,
@@ -37,11 +34,8 @@ try:
     from ofxtools.Parser import OFXTree
 except ImportError:
     OFXTree = None
-    
 from django.views.decorators.http import require_POST
 
-# Status válidos direto do model, usado na importação de XLSX
-# (evita repetir a lista "Pendente"/"Pago" na mão em vários lugares)
 STATUS_VALIDOS = [choice[0] for choice in ContaPagar.STATUS_CHOICES]
 
 
@@ -641,35 +635,31 @@ def importar_xlsx(request):
     if not rows or len(rows) < 2:
         return JsonResponse({'sucesso': False, 'erro': 'A planilha está vazia ou não possui dados suficientes.'}, status=400)
 
-    # 1. Normalização dos Cabeçalhos (Linha 1)
+    # 1. Mapeamento Inteligente dos Cabeçalhos (Linha 1)
     headers = [str(cell).strip().lower() if cell is not None else '' for cell in rows[0]]
 
-    # Função auxiliar para localizar o índice da coluna aceitando variações de nomes
     def get_col_index(possible_names):
         for name in possible_names:
             if name in headers:
                 return headers.index(name)
         return None
 
-    # Mapeamento dos índices com base nos cabeçalhos
     idx_fornecedor = get_col_index(['fornecedor', 'razão social', 'razao social', 'razao_social'])
     idx_banco      = get_col_index(['banco', 'conta', 'banco/saldo', 'bancosaldo'])
     idx_categoria  = get_col_index(['categoria', 'classificação', 'classificacao'])
     idx_valor      = get_col_index(['valor', 'valor (r$)', 'valorpago'])
     idx_vencimento = get_col_index(['vencimento', 'data vencimento', 'dt_vencimento'])
 
-    # Validação mínima dos cabeçalhos obrigatórios
     if idx_fornecedor is None or idx_banco is None or idx_categoria is None:
         return JsonResponse({
             'sucesso': False, 
             'erro': 'Cabeçalhos não identificados. Certifique-se de que a planilha possui colunas para Fornecedor, Banco e Categoria.'
         }, status=400)
 
-    # 2. Caching em memória para otimizar a performance da validação
-    # Busca por 'razao_social' para o modelo Fornecedor
+    # 2. Caching para Alta Performance (Usando razao_social no Fornecedor)
     fornecedores_cache = {
         f.razao_social.strip().lower(): f 
-        for f in Fornecedor.objects.all() if f.razao_social
+        for f in Fornecedor.objects.all() if getattr(f, 'razao_social', None)
     }
     
     bancos_cache = {
@@ -687,9 +677,8 @@ def importar_xlsx(request):
     importados_count = 0
     duplicados_count = 0
 
-    # 3. Processamento Linha por Linha (Começando da linha 2)
+    # 3. Leitura e Validação Linha por Linha
     for index, row in enumerate(rows[1:], start=2):
-        # Ignora linhas totalmente vazias
         if not any(row):
             continue
 
@@ -699,11 +688,12 @@ def importar_xlsx(request):
         val_valor      = row[idx_valor] if idx_valor is not None else 0
         val_vencimento = row[idx_vencimento] if idx_vencimento is not None else None
 
-        # Validação de Relacionamentos (Foreign Keys)
+        # Busca nos Caches
         obj_fornecedor = fornecedores_cache.get(raw_fornecedor.lower())
         obj_banco      = bancos_cache.get(raw_banco.lower())
         obj_categoria  = categorias_cache.get(raw_categoria.lower())
 
+        # Validação de Relações
         faltantes = []
         if not obj_fornecedor:
             faltantes.append(f"Fornecedor '{raw_fornecedor}'")
@@ -716,32 +706,32 @@ def importar_xlsx(request):
             erros.append(f"Linha {index}: Não cadastrado(s) -> {', '.join(faltantes)}.")
             continue
 
-        # Check de Duplicidade no banco de dados
+        # Checagem de Duplicidade (Campo 'vencimento' corrigido)
         ja_existe = ContaPagar.objects.filter(
             fornecedor=obj_fornecedor,
             banco=obj_banco,
             categoria=obj_categoria,
             valor=val_valor,
-            data_vencimento=val_vencimento
+            vencimento=val_vencimento
         ).exists()
 
         if ja_existe:
             duplicados_count += 1
             continue
 
-        # Monta o objeto para inserção em lote
+        # Criação do Objeto em Memória (Campo 'vencimento' corrigido)
         novas_contas.append(
             ContaPagar(
                 fornecedor=obj_fornecedor,
                 banco=obj_banco,
                 categoria=obj_categoria,
                 valor=val_valor,
-                data_vencimento=val_vencimento
+                vencimento=val_vencimento
             )
         )
         importados_count += 1
 
-    # 4. Inserção em Massa no Banco de Dados
+    # 4. Inserção em Lote no Banco de Dados
     if novas_contas:
         with transaction.atomic():
             ContaPagar.objects.bulk_create(novas_contas)
