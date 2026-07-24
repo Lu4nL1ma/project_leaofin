@@ -1,43 +1,43 @@
-<div class="modal-overlay" id="modalUpload" style="display: none;">
-    <div class="modal-box">
+<!-- Modal de Upload de Planilha XLSX -->
+<div id="modalUpload" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
         <div class="modal-header">
-            <h2>Importar Planilha XLSX</h2>
-            <button type="button" class="modal-close" onclick="fecharModalUpload()">&times;</button>
+            <h3>Importar Contas a Pagar (.xlsx)</h3>
+            <button type="button" class="btn-close-modal" onclick="fecharModalUpload()">&times;</button>
         </div>
 
-        <a href="{% url 'baixar_planilha_padrao' %}" class="modal-template-link" download>
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
-                <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>
-            </svg>
-            Baixar planilha padrão
-        </a>
+        <div class="modal-body">
+            <form method="POST" enctype="multipart/form-data" action="{% url 'importar_xlsx' %}" id="formUploadXlsx">
+                {% csrf_token %}
 
-        <form method="POST" enctype="multipart/form-data" action="{% url 'importar_xlsx' %}" id="formUploadXlsx">
-            {% csrf_token %}
+                <!-- Zone de Drag & Drop e Seleção de Arquivo -->
+                <div class="modal-dropzone" id="dropzoneXlsx" style="cursor: pointer;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
+                        <path d="M7.646.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 1.707V11.5a.5.5 0 0 1-1 0V1.707L5.354 3.854a.5.5 0 1 1-.708-.708z"/>
+                    </svg>
+                    <span id="textoDropzone">Arraste o arquivo .xlsx aqui ou clique para selecionar</span>
+                    
+                    <input
+                        type="file"
+                        id="arquivo_xlsx"
+                        name="arquivo_xlsx"
+                        accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        style="display: none;"
+                    >
+                    
+                    <div class="modal-file-name" id="nomeArquivoXlsx" style="margin-top: 10px; font-weight: bold; color: #2b6cb0;"></div>
+                </div>
 
-            <div class="modal-dropzone" id="dropzoneXlsx" style="cursor: pointer;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
-                    <path d="M7.646.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 1.707V11.5a.5.5 0 0 1-1 0V1.707L5.354 3.854a.5.5 0 1 1-.708-.708z"/>
-                </svg>
-                <span id="textoDropzone">Arraste o arquivo aqui ou clique para selecionar</span>
-                
-                <!-- Removido o required para evitar travamento silencioso -->
-                <input
-                    type="file"
-                    id="arquivo_xlsx"
-                    name="arquivo_xlsx"
-                    accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    style="display: none;"
-                >
-                <div class="modal-file-name" id="nomeArquivoXlsx" style="margin-top: 10px; font-weight: bold; color: #2b6cb0;"></div>
-            </div>
+                <!-- Div de Retorno dos Status / Feedbacks da Importação -->
+                <div id="statusModal" style="margin-top: 15px; display: none;"></div>
 
-            <div class="modal-actions">
-                <button type="button" class="btn-modal-cancel" onclick="fecharModalUpload()">Cancelar</button>
-                <button type="submit" class="btn-salvar-modal">Importar</button>
-            </div>
-        </form>
+                <!-- Botões de Ação -->
+                <div class="modal-actions" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn-modal-cancel" onclick="fecharModalUpload()">Fechar</button>
+                    <button type="submit" class="btn-salvar-modal" id="btnImportar">Importar</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>

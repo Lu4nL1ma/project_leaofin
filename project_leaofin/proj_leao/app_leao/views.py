@@ -623,17 +623,15 @@ def salvar_conciliacao_lote(request):
 
     return JsonResponse({'success': False, 'error': 'Método não permitido.'})
 
-#MUDAAAAAR
+
 def importar_xlsx(request):
     if request.method == 'POST' and request.FILES.get('arquivo_xlsx'):
         arquivo = request.FILES['arquivo_xlsx']
         
         try:
-            # Read_only=True garante economia de memória no servidor
             wb = openpyxl.load_workbook(arquivo, read_only=True, data_only=True)
             sheet = wb.active
 
-            # Caches em memória para evitar requisições repetidas ao banco durante o loop
             fornecedores_cache = {f.nome.upper().strip(): f for f in Fornecedor.objects.all()}
             bancos_cache = {b.nome.upper().strip(): b for b in BancoSaldo.objects.all()}
             categorias_cache = {c.nome.upper().strip(): c for c in Categoria.objects.all()}
@@ -642,17 +640,13 @@ def importar_xlsx(request):
             erros_detalhados = []
             linhas_ignoradas_por_duplicacao = 0
 
-            # Percorre a planilha a partir da linha 2 (ignorando o cabeçalho)
             for idx, row in enumerate(sheet.iter_rows(values_only=True), start=1):
-                if idx == 1 or not any(row):  # Ignores cabeçalho ou linhas totalmente vazias
+                if idx == 1 or not any(row):
                     continue
 
-                # Extrai as primeiras 6 colunas
                 num_documento, nome_fornecedor, nome_banco, nome_categoria, valor_raw, data_raw = row[:6]
 
-                # -------------------------------------------------------------
-                # 1. VALIDAÇÃO DE RELACIONAMENTOS (Rótulos)
-                # -------------------------------------------------------------
+                # 1. Validação de Relacionamentos
                 fornecedor_key = str(nome_fornecedor).upper().strip() if nome_fornecedor else ''
                 banco_key = str(nome_banco).upper().strip() if nome_banco else ''
                 categoria_key = str(nome_categoria).upper().strip() if nome_categoria else ''
@@ -661,23 +655,16 @@ def importar_xlsx(request):
                 obj_banco = bancos_cache.get(banco_key)
                 obj_categoria = categorias_cache.get(categoria_key)
 
-                # Se algum rótulo não existir na base de dados, mapeia exatamente o que faltou
                 if not obj_fornecedor or not obj_banco or not obj_categoria:
                     faltantes = []
-                    if not obj_fornecedor: 
-                        faltantes.append(f"Fornecedor '{nome_fornecedor}'")
-                    if not obj_banco: 
-                        faltantes.append(f"Banco '{nome_banco}'")
-                    if not obj_categoria: 
-                        faltantes.append(f"Categoria '{nome_categoria}'")
+                    if not obj_fornecedor: faltantes.append(f"Fornecedor '{nome_fornecedor}'")
+                    if not obj_banco: faltantes.append(f"Banco '{nome_banco}'")
+                    if not obj_categoria: faltantes.append(f"Categoria '{nome_categoria}'")
                     
                     erros_detalhados.append(f"Linha {idx}: Não cadastrado(s) -> {', '.join(faltantes)}.")
                     continue
 
-                # -------------------------------------------------------------
-                # 2. NORMALIZAÇÃO DE VALOR E DATA
-                # -------------------------------------------------------------
-                # Tratar Valor (suporta float, int, Decimal e string formatada "R$ 1.000,00")
+                # 2. Normalização de Valor e Data
                 try:
                     if isinstance(valor_raw, (int, float, Decimal)):
                         valor = Decimal(str(valor_raw))
@@ -688,7 +675,6 @@ def importar_xlsx(request):
                     erros_detalhados.append(f"Linha {idx}: Valor inválido '{valor_raw}'.")
                     continue
 
-                # Tratar Data (suporta datetime do Excel, date ou strings "DD/MM/AAAA" / "AAAA-MM-DD")
                 data = None
                 if isinstance(data_raw, datetime):
                     data = data_raw.date()
@@ -707,20 +693,11 @@ def importar_xlsx(request):
                     erros_detalhados.append(f"Linha {idx}: Data inválida '{data_raw}'.")
                     continue
 
-                # -------------------------------------------------------------
-                # 3. VALIDAÇÃO DE DUPLICIDADE
-                # -------------------------------------------------------------
-                ja_existe = ContaPagar.objects.filter(
-                    numero_documento=num_documento,
-                    fornecedor=obj_fornecedor,
-                    valor=valor
-                ).exists()
-
-                if ja_existe:
+                # 3. Validação de Duplicidade
+                if ContaPagar.objects.filter(numero_documento=num_documento, fornecedor=obj_fornecedor, valor=valor).exists():
                     linhas_ignoradas_por_duplicacao += 1
                     continue
 
-                # Instancia o objeto ContaPagar sem salvar no banco ainda
                 novos_registros.append(
                     ContaPagar(
                         numero_documento=num_documento,
@@ -732,42 +709,22 @@ def importar_xlsx(request):
                     )
                 )
 
-            # -------------------------------------------------------------
-            # 4. SALVAMENTO EM LOTE E FEEDBACK DE STATUS
-            # -------------------------------------------------------------
+            # 4. Salvamento em Lote
             if novos_registros:
                 ContaPagar.objects.bulk_create(novos_registros)
-                messages.success(
-                    request, 
-                    f"✅ Importação concluída! {len(novos_registros)} conta(s) a pagar salva(s) com sucesso."
-                )
 
-            if linhas_ignoradas_por_duplicacao > 0:
-                messages.info(
-                    request, 
-                    f"ℹ️ {linhas_ignoradas_por_duplicacao} linha(s) ignorada(s) por já existirem no banco (duplicadas)."
-                )
-
-            if erros_detalhados:
-                # Exibe até 8 erros por vez para não poluir a tela do usuário
-                erros_exibicao = "<br>".join(erros_detalhados[:8])
-                if len(erros_detalhados) > 8:
-                    erros_exibicao += f"<br>... e mais {len(erros_detalhados) - 8} erro(s)."
-                
-                messages.warning(
-                    request, 
-                    f"⚠️ As seguintes linhas não puderam ser importadas:<br>{erros_exibicao}"
-                )
-
-            if not novos_registros and not erros_detalhados and linhas_ignoradas_por_duplicacao == 0:
-                messages.warning(request, "Nenhum dado válido foi encontrado na planilha.")
+            # Resposta JSON tratada
+            return JsonResponse({
+                'sucesso': True,
+                'importados': len(novos_registros),
+                'duplicados': linhas_ignoradas_por_duplicacao,
+                'erros': erros_detalhados
+            })
 
         except Exception as e:
-            messages.error(request, f"❌ Erro ao ler a planilha: {str(e)}")
+            return JsonResponse({'sucesso': False, 'erro': f"Erro ao ler a planilha: {str(e)}"}, status=400)
 
-        return redirect('homes')
-
-    return redirect('homes')
+    return JsonResponse({'sucesso': False, 'erro': "Requisição inválida."}, status=400)
 
 
 def baixar_planilha_padrao(request):
