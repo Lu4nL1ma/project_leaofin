@@ -623,42 +623,35 @@ def salvar_conciliacao_lote(request):
 
     return JsonResponse({'success': False, 'error': 'Método não permitido.'})
 
-
+#MUDAAAAAR
 def importar_xlsx(request):
-
     if request.method == 'POST' and request.FILES.get('arquivo_xlsx'):
         arquivo = request.FILES['arquivo_xlsx']
         
         try:
-            # Carrega a planilha apenas para leitura (eficiência de memória)
+            # Read_only=True garante economia de memória no servidor
             wb = openpyxl.load_workbook(arquivo, read_only=True, data_only=True)
             sheet = wb.active
 
-            # Cache em memória para evitar dezenas de consultas repetidas ao banco
+            # Caches em memória para evitar requisições repetidas ao banco durante o loop
             fornecedores_cache = {f.nome.upper().strip(): f for f in Fornecedor.objects.all()}
             bancos_cache = {b.nome.upper().strip(): b for b in BancoSaldo.objects.all()}
             categorias_cache = {c.nome.upper().strip(): c for c in Categoria.objects.all()}
 
             novos_registros = []
-            linhas_ignoradas_por_relacionamento = 0
+            erros_detalhados = []
             linhas_ignoradas_por_duplicacao = 0
 
-            # Iterar pelas linhas (ignorando o cabeçalho na linha 1)
+            # Percorre a planilha a partir da linha 2 (ignorando o cabeçalho)
             for idx, row in enumerate(sheet.iter_rows(values_only=True), start=1):
-                if idx == 1 or not any(row):  # Pula cabeçalho ou linhas totalmente vazias
+                if idx == 1 or not any(row):  # Ignores cabeçalho ou linhas totalmente vazias
                     continue
 
-                # Supondo a estrutura das colunas na planilha:
-                # Coluna 0: Identificador/Número do Documento (ou código único)
-                # Coluna 1: Nome do Fornecedor
-                # Coluna 2: Nome do Banco
-                # Coluna 3: Nome da Categoria
-                # Coluna 4: Valor
-                # Coluna 5: Data
+                # Extrai as primeiras 6 colunas
                 num_documento, nome_fornecedor, nome_banco, nome_categoria, valor_raw, data_raw = row[:6]
 
                 # -------------------------------------------------------------
-                # REGRA 1: Validar se Rótulos/Relacionamentos existem no banco
+                # 1. VALIDAÇÃO DE RELACIONAMENTOS (Rótulos)
                 # -------------------------------------------------------------
                 fornecedor_key = str(nome_fornecedor).upper().strip() if nome_fornecedor else ''
                 banco_key = str(nome_banco).upper().strip() if nome_banco else ''
@@ -668,47 +661,66 @@ def importar_xlsx(request):
                 obj_banco = bancos_cache.get(banco_key)
                 obj_categoria = categorias_cache.get(categoria_key)
 
-                # Se algum não existir no banco, ignoramos a linha
+                # Se algum rótulo não existir na base de dados, mapeia exatamente o que faltou
                 if not obj_fornecedor or not obj_banco or not obj_categoria:
-                    linhas_ignoradas_por_relacionamento += 1
+                    faltantes = []
+                    if not obj_fornecedor: 
+                        faltantes.append(f"Fornecedor '{nome_fornecedor}'")
+                    if not obj_banco: 
+                        faltantes.append(f"Banco '{nome_banco}'")
+                    if not obj_categoria: 
+                        faltantes.append(f"Categoria '{nome_categoria}'")
+                    
+                    erros_detalhados.append(f"Linha {idx}: Não cadastrado(s) -> {', '.join(faltantes)}.")
                     continue
 
                 # -------------------------------------------------------------
-                # REGRA 2: Não incluir duplicados
+                # 2. NORMALIZAÇÃO DE VALOR E DATA
                 # -------------------------------------------------------------
-                # Verifica no banco se já existe um registro idêntico 
-                # (Ex: mesmo número de documento + fornecedor + valor)
+                # Tratar Valor (suporta float, int, Decimal e string formatada "R$ 1.000,00")
+                try:
+                    if isinstance(valor_raw, (int, float, Decimal)):
+                        valor = Decimal(str(valor_raw))
+                    else:
+                        valor_str = str(valor_raw).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                        valor = Decimal(valor_str)
+                except (InvalidOperation, TypeError, ValueError):
+                    erros_detalhados.append(f"Linha {idx}: Valor inválido '{valor_raw}'.")
+                    continue
+
+                # Tratar Data (suporta datetime do Excel, date ou strings "DD/MM/AAAA" / "AAAA-MM-DD")
+                data = None
+                if isinstance(data_raw, datetime):
+                    data = data_raw.date()
+                elif isinstance(data_raw, date):
+                    data = data_raw
+                elif isinstance(data_raw, str):
+                    try:
+                        data = datetime.strptime(data_raw.strip(), '%d/%m/%Y').date()
+                    except ValueError:
+                        try:
+                            data = datetime.strptime(data_raw.strip(), '%Y-%m-%d').date()
+                        except ValueError:
+                            pass
+
+                if not data:
+                    erros_detalhados.append(f"Linha {idx}: Data inválida '{data_raw}'.")
+                    continue
+
+                # -------------------------------------------------------------
+                # 3. VALIDAÇÃO DE DUPLICIDADE
+                # -------------------------------------------------------------
                 ja_existe = ContaPagar.objects.filter(
                     numero_documento=num_documento,
                     fornecedor=obj_fornecedor,
-                    valor=valor_raw
+                    valor=valor
                 ).exists()
 
                 if ja_existe:
                     linhas_ignoradas_por_duplicacao += 1
                     continue
 
-                # -------------------------------------------------------------
-                # Normalização de Tipos (Data e Valor)
-                # -------------------------------------------------------------
-                # Tratar Valor (Decimal)
-                try:
-                    valor = Decimal(str(valor_raw).replace('R$', '').replace('.', '').replace(',', '.').strip())
-                except (InvalidOperation, TypeError, ValueError):
-                    continue
-
-                # Tratar Data
-                if isinstance(data_raw, datetime):
-                    data = data_raw.date()
-                elif isinstance(data_raw, str):
-                    try:
-                        data = datetime.strptime(data_raw.strip(), '%d/%m/%Y').date()
-                    except ValueError:
-                        continue
-                else:
-                    data = data_raw
-
-                # Instancia o novo objeto sem salvar ainda
+                # Instancia o objeto ContaPagar sem salvar no banco ainda
                 novos_registros.append(
                     ContaPagar(
                         numero_documento=num_documento,
@@ -720,21 +732,38 @@ def importar_xlsx(request):
                     )
                 )
 
-            # Salva em lote para alta performance
+            # -------------------------------------------------------------
+            # 4. SALVAMENTO EM LOTE E FEEDBACK DE STATUS
+            # -------------------------------------------------------------
             if novos_registros:
                 ContaPagar.objects.bulk_create(novos_registros)
+                messages.success(
+                    request, 
+                    f"✅ Importação concluída! {len(novos_registros)} conta(s) a pagar salva(s) com sucesso."
+                )
 
-            # Feedback detalhado para o usuário no Django Messages
-            msg = f'Importação concluída! {len(novos_registros)} registros importados com sucesso.'
             if linhas_ignoradas_por_duplicacao > 0:
-                msg += f' | {linhas_ignoradas_por_duplicacao} duplicados ignorados.'
-            if linhas_ignoradas_por_relacionamento > 0:
-                msg += f' | {linhas_ignoradas_por_relacionamento} linhas ignoradas por Fornecedor/Banco/Categoria não cadastrados.'
+                messages.info(
+                    request, 
+                    f"ℹ️ {linhas_ignoradas_por_duplicacao} linha(s) ignorada(s) por já existirem no banco (duplicadas)."
+                )
 
-            messages.success(request, msg)
+            if erros_detalhados:
+                # Exibe até 8 erros por vez para não poluir a tela do usuário
+                erros_exibicao = "<br>".join(erros_detalhados[:8])
+                if len(erros_detalhados) > 8:
+                    erros_exibicao += f"<br>... e mais {len(erros_detalhados) - 8} erro(s)."
+                
+                messages.warning(
+                    request, 
+                    f"⚠️ As seguintes linhas não puderam ser importadas:<br>{erros_exibicao}"
+                )
+
+            if not novos_registros and not erros_detalhados and linhas_ignoradas_por_duplicacao == 0:
+                messages.warning(request, "Nenhum dado válido foi encontrado na planilha.")
 
         except Exception as e:
-            messages.error(request, f"Erro ao processar planilha: {str(e)}")
+            messages.error(request, f"❌ Erro ao ler a planilha: {str(e)}")
 
         return redirect('homes')
 
