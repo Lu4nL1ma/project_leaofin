@@ -635,4 +635,152 @@ body {
 [data-title]::after {
     white-space: nowrap;
     z-index: 99999 !important;
+}/* Animação e Controle de Passos do Modal */
+.modal-step {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.modal-step.fade-in {
+    animation: fadeInModal 0.35s forwards;
+}
+
+@keyframes fadeInModal {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Grids de Resumo / Estatísticas */
+.import-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.summary-card {
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.summary-card.success {
+    background-color: #e6f4ea;
+    border: 1px solid #ceead6;
+    color: #137333;
+}
+
+.summary-card.info {
+    background-color: #e8f0fe;
+    border: 1px solid #d2e3fc;
+    color: #1a73e8;
+}
+
+.summary-card .number {
+    font-size: 22px;
+    font-weight: bold;
+    display: block;
+}
+
+.summary-card .label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Caixa de Erros Detalhados com Scroll */
+.error-list-container {
+    background-color: #fef7e0;
+    border: 1px solid #feefc3;
+    border-radius: 8px;
+    padding: 12px;
+    max-height: 160px;
+    overflow-y: auto;
+    font-size: 13px;
+    color: #b06000;
+}
+
+.error-list-container ul {
+    margin: 8px 0 0 0;
+    padding-left: 20px;
+}
+
+/* Animação e Controle de Passos do Modal */
+.modal-step {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.modal-step.fade-in {
+    animation: fadeInModal 0.35s forwards;
+}
+
+@keyframes fadeInModal {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Grids de Resumo / Estatísticas */
+.import-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.summary-card {
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.summary-card.success {
+    background-color: #e6f4ea;
+    border: 1px solid #ceead6;
+    color: #137333;
+}
+
+.summary-card.info {
+    background-color: #e8f0fe;
+    border: 1px solid #d2e3fc;
+    color: #1a73e8;
+}
+
+.summary-card .number {
+    font-size: 22px;
+    font-weight: bold;
+    display: block;
+}
+
+.summary-card .label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Caixa de Erros Detalhados com Scroll */
+.error-list-container {
+    background-color: #fef7e0;
+    border: 1px solid #feefc3;
+    border-radius: 8px;
+    padding: 12px;
+    max-height: 160px;
+    overflow-y: auto;
+    font-size: 13px;
+    color: #b06000;
+}
+
+.error-list-container ul {
+    margin: 8px 0 0 0;
+    padding-left: 20px;
 }
