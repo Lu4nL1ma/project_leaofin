@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from decimal import Decimal, InvalidOperation
 import openpyxl
+import re
 from openpyxl import Workbook
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
@@ -37,6 +38,12 @@ except ImportError:
 from django.views.decorators.http import require_POST
 
 STATUS_VALIDOS = [choice[0] for choice in ContaPagar.STATUS_CHOICES]
+
+def limpar_cnpj(valor):
+    """ Remove caracteres não numéricos do CNPJ (ex: 00.000.000/0001-00 -> 00000000000100) """
+    if not valor:
+        return ''
+    return re.sub(r'\D', '', str(valor))
 
 
 def parse_valor_brl(valor_str):
@@ -653,6 +660,7 @@ def salvar_conciliacao_lote(request):
 
     return JsonResponse({'success': False, 'error': 'Método não permitido.'})
 
+
 @require_POST
 def importar_xlsx(request):
     if 'arquivo_xlsx' not in request.FILES:
@@ -679,22 +687,26 @@ def importar_xlsx(request):
                 return headers.index(name)
         return None
 
-    idx_fornecedor = get_col_index(['fornecedor', 'razão social', 'razao social', 'razao_social'])
-    idx_banco      = get_col_index(['banco', 'conta', 'banco/saldo', 'bancosaldo'])
-    idx_categoria  = get_col_index(['categoria', 'classificação', 'classificacao'])
-    idx_valor      = get_col_index(['valor', 'valor (r$)', 'valorpago'])
-    idx_vencimento = get_col_index(['vencimento', 'data vencimento', 'dt_vencimento'])
+    # Mapeamento atualizado para buscar a coluna de CNPJ
+    idx_cnpj           = get_col_index(['cnpj', 'cpf/cnpj', 'cnpj_fornecedor', 'cnpj/cpf'])
+    idx_banco          = get_col_index(['banco', 'conta', 'banco/saldo', 'bancosaldo'])
+    idx_categoria      = get_col_index(['categoria', 'classificação', 'classificacao'])
+    idx_valor          = get_col_index(['valor', 'valor (r$)', 'valorpago'])
+    idx_vencimento     = get_col_index(['vencimento', 'data vencimento', 'dt_vencimento'])
+    idx_nota_fiscal    = get_col_index(['nota_fiscal', 'nota fiscal', 'nf', 'num_nota'])
+    idx_linha_digitavel = get_col_index(['linha_digitavel', 'linha digitável', 'linha digitavel', 'linha_boleto', 'codigo_barras'])
 
-    if idx_fornecedor is None or idx_banco is None or idx_categoria is None or idx_vencimento is None:
+    if idx_cnpj is None or idx_banco is None or idx_categoria is None or idx_vencimento is None:
         return JsonResponse({
             'sucesso': False, 
-            'erro': 'Cabeçalhos não identificados. Certifique-se de que a planilha possui colunas para Fornecedor, Banco, Categoria e Vencimento.'
+            'erro': 'Cabeçalhos obrigatórios não identificados. Certifique-se de que a planilha possui colunas para CNPJ, Banco, Categoria e Vencimento.'
         }, status=400)
 
-    # 2. Caching para Alta Performance (Usando razao_social no Fornecedor)
+    # 2. Caching por CNPJ para Alta Performance
+    # Mapeia o CNPJ limpo ao objeto Fornecedor correspondente
     fornecedores_cache = {
-        f.razao_social.strip().lower(): f 
-        for f in Fornecedor.objects.all() if getattr(f, 'razao_social', None)
+        limpar_cnpj(f.cnpj): f 
+        for f in Fornecedor.objects.all() if getattr(f, 'cnpj', None)
     }
     
     bancos_cache = {
@@ -717,25 +729,29 @@ def importar_xlsx(request):
         if not any(row):
             continue
 
-        raw_fornecedor = str(row[idx_fornecedor]).strip() if row[idx_fornecedor] is not None else ''
+        raw_cnpj       = str(row[idx_cnpj]).strip() if row[idx_cnpj] is not None else ''
         raw_banco      = str(row[idx_banco]).strip() if row[idx_banco] is not None else ''
         raw_categoria  = str(row[idx_categoria]).strip() if row[idx_categoria] is not None else ''
         
         val_valor      = row[idx_valor] if idx_valor is not None else 0
         raw_vencimento = row[idx_vencimento] if idx_vencimento is not None else None
         
-        # Converte e valida o Vencimento
-        val_vencimento = normalizar_data(raw_vencimento)
+        val_nota_fiscal  = str(row[idx_nota_fiscal]).strip() if idx_nota_fiscal is not None and row[idx_nota_fiscal] is not None else ''
+        val_linha_boleto = str(row[idx_linha_digitavel]).strip() if idx_linha_digitavel is not None and row[idx_linha_digitavel] is not None else ''
 
-        # Busca nos Caches
-        obj_fornecedor = fornecedores_cache.get(raw_fornecedor.lower())
+        # Converte a data e limpa o CNPJ da planilha
+        val_vencimento = normalizar_data(raw_vencimento)
+        cnpj_limpo = limpar_cnpj(raw_cnpj)
+
+        # Busca o Fornecedor no Cache através do CNPJ
+        obj_fornecedor = fornecedores_cache.get(cnpj_limpo)
         obj_banco      = bancos_cache.get(raw_banco.lower())
         obj_categoria  = categorias_cache.get(raw_categoria.lower())
 
         # Validação de Relações e Campos Obrigatórios
         faltantes = []
         if not obj_fornecedor:
-            faltantes.append(f"Fornecedor '{raw_fornecedor}'")
+            faltantes.append(f"CNPJ '{raw_cnpj}' não cadastrado")
         if not obj_banco:
             faltantes.append(f"Banco '{raw_banco}'")
         if not obj_categoria:
@@ -753,21 +769,25 @@ def importar_xlsx(request):
             banco=obj_banco,
             categoria=obj_categoria,
             valor=val_valor,
-            vencimento=val_vencimento
+            vencimento=val_vencimento,
+            nota_fiscal=val_nota_fiscal,
+            linha_boleto=val_linha_boleto
         ).exists()
 
         if ja_existe:
             duplicados_count += 1
             continue
 
-        # Criação do Objeto em Memória
+        # Criação do Registro (fornecedor associado via CNPJ)
         novas_contas.append(
             ContaPagar(
                 fornecedor=obj_fornecedor,
                 banco=obj_banco,
                 categoria=obj_categoria,
                 valor=val_valor,
-                vencimento=val_vencimento
+                vencimento=val_vencimento,
+                nota_fiscal=val_nota_fiscal,
+                linha_boleto=val_linha_boleto
             )
         )
         importados_count += 1
@@ -784,14 +804,15 @@ def importar_xlsx(request):
         'erros': erros
     })
 
+
 def baixar_planilha_padrao(request):
     workbook = Workbook()
     aba = workbook.active
     aba.title = "Modelo"
 
-    cabecalho = ["Vencimento", "Fornecedor", "Categoria", "Banco", "Parcela", "Valor", "Observação", "Status"]
+    cabecalho = ["vencimento", "fornecedor", "categoria", "banco", "parcela", "valor", "observação", "status", "nota_fiscal", "linha_digitavel"]
     aba.append(cabecalho)
-    aba.append(["12/12/2026", "Seu Fornecedor", "Energia", "Nome Banco", "1/1", 150.00, "Sua Observação", "Pendente"])
+    aba.append(["12/12/2026", "Seu Fornecedor", "Energia", "Nome Banco", "1/1", 150.00, "Sua Observação", "Pendente","0000", "00000000000000000000000000000"])
 
     for coluna in aba.columns:
         maior_largura = max(len(str(celula.value)) for celula in coluna)

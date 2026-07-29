@@ -6,6 +6,9 @@
         <div id="modalStepUpload" class="modal-step active">
             <div class="modal-header">
                 <h3>Importar Contas a Pagar (.xlsx)</h3>
+                <a href="{% url "baixar_planilha_padrao" %}" onclick="baixarPlanilhaPadrao()" class="btn-excel">
+                    Baixar Planilha Padrão
+                </a>
                 <button type="button" class="btn-close-modal" onclick="fecharModalUpload()">&times;</button>
             </div>
 
