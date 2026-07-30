@@ -695,7 +695,7 @@ def importar_xlsx(request):
     idx_valor           = encontrar_indice(['valor', 'valor (r$)', 'valorpago', 'valor_pago', 'valor total'])
     idx_vencimento      = encontrar_indice(['vencimento', 'data vencimento', 'dt_vencimento', 'data_vencimento', 'dt vencimento'])
     idx_nota_fiscal     = encontrar_indice(['nota_fiscal', 'nota fiscal', 'nf', 'num_nota', 'numero_nota', 'nº nota'])
-    idx_linha_digitavel = encontrar_indice(['linha_digitavel', 'linha digitável', 'linha digitavel', 'linha_boleto', 'codigo_barras', 'código de barras', 'linha_digitavel'])
+    idx_linha_digitavel = encontrar_indice(['linha_digitavel', 'linha digitável', 'linha digitavel', 'linha_boleto', 'codigo_barras', 'código de barras'])
 
     obrigatorios_faltantes = []
     if idx_cnpj is None: obrigatorios_faltantes.append("Fornecedor/CNPJ")
@@ -752,7 +752,7 @@ def importar_xlsx(request):
             raw_banco        = extrair_str(idx_banco)
             raw_categoria    = extrair_str(idx_categoria)
             val_nota_fiscal  = extrair_str(idx_nota_fiscal)
-            val_linha_boleto = extrair_str(idx_linha_digitavel)
+            val_linha_digitavel = extrair_str(idx_linha_digitavel)
 
             # Extração de valores e datas via funções customizadas
             raw_valor      = row[idx_valor] if idx_valor is not None and idx_valor < len(row) else 0
@@ -797,8 +797,8 @@ def importar_xlsx(request):
                     conta_existente.nota_fiscal = val_nota_fiscal
                     alterado = True
 
-                if not conta_existente.linha_boleto and val_linha_boleto:
-                    conta_existente.linha_boleto = val_linha_boleto
+                if not conta_existente.linha_digitavel and val_linha_digitavel:
+                    conta_existente.linha_digitavel = val_linha_digitavel
                     alterado = True
 
                 if alterado:
@@ -818,7 +818,7 @@ def importar_xlsx(request):
                     valor=val_valor,
                     vencimento=val_vencimento,
                     nota_fiscal=val_nota_fiscal,
-                    linha_boleto=val_linha_boleto
+                    linha_digitavel=val_linha_digitavel
                 )
             )
             importados_count += 1
@@ -835,7 +835,7 @@ def importar_xlsx(request):
             if contas_para_atualizar:
                 ContaPagar.objects.bulk_update(
                     contas_para_atualizar, 
-                    fields=['nota_fiscal', 'linha_boleto']
+                    fields=['nota_fiscal', 'linha_digitavel']
                 )
     except Exception as db_err:
         return JsonResponse({'sucesso': False, 'erro': f'Erro ao salvar no banco de dados: {str(db_err)}'}, status=500)
