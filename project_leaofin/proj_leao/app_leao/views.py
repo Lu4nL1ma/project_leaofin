@@ -745,14 +745,21 @@ def importar_xlsx(request):
             raw_valor      = row[idx_valor] if idx_valor is not None else 0
             raw_vencimento = row[idx_vencimento] if idx_vencimento is not None else None
             
-            # Formatação para string tratando números que vêm como float do Excel
-            raw_nf = row[idx_nota_fiscal] if idx_nota_fiscal is not None else ''
-            val_nota_fiscal = str(int(raw_nf)) if isinstance(raw_nf, float) and raw_nf.is_integer() else str(raw_nf or '').strip()
+            # Tratamento seguro de Nota Fiscal contra erro de 'float'
+            raw_nf = row[idx_nota_fiscal] if idx_nota_fiscal is not None and row[idx_nota_fiscal] is not None else ''
+            if isinstance(raw_nf, float):
+                val_nota_fiscal = str(int(raw_nf)) if raw_nf.is_integer() else str(raw_nf)
+            else:
+                val_nota_fiscal = str(raw_nf).strip()
 
-            raw_linha = row[idx_linha_digitavel] if idx_linha_digitavel is not None else ''
-            val_linha_boleto = str(int(raw_linha)) if isinstance(raw_linha, float) and raw_linha.is_integer() else str(raw_linha or '').strip()
+            # Tratamento seguro de Linha Digitável contra erro de 'float'
+            raw_linha = row[idx_linha_digitavel] if idx_linha_digitavel is not None and row[idx_linha_digitavel] is not None else ''
+            if isinstance(raw_linha, float):
+                val_linha_boleto = str(int(raw_linha)) if raw_linha.is_integer() else str(raw_linha)
+            else:
+                val_linha_boleto = str(raw_linha).strip()
 
-            # Uso das suas funções customizadas
+            # Uso das funções customizadas
             val_vencimento = normalizar_data(raw_vencimento)
             val_valor      = parse_valor_brl(raw_valor)
             cnpj_limpo     = limpar_cnpj(raw_cnpj)
@@ -788,12 +795,10 @@ def importar_xlsx(request):
             if conta_existente:
                 alterado = False
                 
-                # Preenche nota fiscal se estiver em branco no banco e presente no Excel
                 if not conta_existente.nota_fiscal and val_nota_fiscal:
                     conta_existente.nota_fiscal = val_nota_fiscal
                     alterado = True
 
-                # Preenche linha digitável se estiver em branco no banco e presente no Excel
                 if not conta_existente.linha_boleto and val_linha_boleto:
                     conta_existente.linha_boleto = val_linha_boleto
                     alterado = True
