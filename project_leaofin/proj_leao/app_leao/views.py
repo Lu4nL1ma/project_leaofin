@@ -689,13 +689,13 @@ def importar_xlsx(request):
                 return headers_lower.index(nome)
         return None
 
-    idx_cnpj            = encontrar_indice(['fornecedor', 'cnpj', 'cpf/cnpj', 'cnpj_fornecedor', 'cnpj/cpf', 'doc_fornecedor', 'documento', 'razao social'])
+    idx_cnpj            = encontrar_indice(['fornecedor', 'cnpj', 'cpf/cnpj', 'cnpj_fornecedor', 'cnpj/cpf', 'doc_fornecedor', 'documento', 'razao social', 'razão social'])
     idx_banco           = encontrar_indice(['banco', 'conta', 'banco/saldo', 'bancosaldo', 'conta corrente', 'conta_corrente'])
     idx_categoria       = encontrar_indice(['categoria', 'classificação', 'classificacao', 'categoria financeira'])
     idx_valor           = encontrar_indice(['valor', 'valor (r$)', 'valorpago', 'valor_pago', 'valor total'])
     idx_vencimento      = encontrar_indice(['vencimento', 'data vencimento', 'dt_vencimento', 'data_vencimento', 'dt vencimento'])
     idx_nota_fiscal     = encontrar_indice(['nota_fiscal', 'nota fiscal', 'nf', 'num_nota', 'numero_nota', 'nº nota'])
-    idx_linha_digitavel = encontrar_indice(['linha_digitavel', 'linha digitável', 'linha digitavel', 'linha_boleto', 'codigo_barras', 'código de barras'])
+    idx_linha_digitavel = encontrar_indice(['linha_digitavel', 'linha digitável', 'linha digitavel', 'linha_boleto', 'codigo_barras', 'código de barras', 'linha_digitavel'])
 
     obrigatorios_faltantes = []
     if idx_cnpj is None: obrigatorios_faltantes.append("Fornecedor/CNPJ")
@@ -738,28 +738,26 @@ def importar_xlsx(request):
             continue
 
         try:
-            raw_cnpj       = str(row[idx_cnpj]).strip() if row[idx_cnpj] is not None else ''
-            raw_banco      = str(row[idx_banco]).strip() if row[idx_banco] is not None else ''
-            raw_categoria  = str(row[idx_categoria]).strip() if row[idx_categoria] is not None else ''
-            
-            raw_valor      = row[idx_valor] if idx_valor is not None else 0
-            raw_vencimento = row[idx_vencimento] if idx_vencimento is not None else None
-            
-            # Tratamento seguro de Nota Fiscal contra erro de 'float'
-            raw_nf = row[idx_nota_fiscal] if idx_nota_fiscal is not None and row[idx_nota_fiscal] is not None else ''
-            if isinstance(raw_nf, float):
-                val_nota_fiscal = str(int(raw_nf)) if raw_nf.is_integer() else str(raw_nf)
-            else:
-                val_nota_fiscal = str(raw_nf).strip()
+            # Helper universal de extração segura de string
+            def extrair_str(idx):
+                if idx is None or idx >= len(row) or row[idx] is None:
+                    return ''
+                val = row[idx]
+                if isinstance(val, float):
+                    return str(int(val)) if val.is_integer() else str(val)
+                return str(val).strip()
 
-            # Tratamento seguro de Linha Digitável contra erro de 'float'
-            raw_linha = row[idx_linha_digitavel] if idx_linha_digitavel is not None and row[idx_linha_digitavel] is not None else ''
-            if isinstance(raw_linha, float):
-                val_linha_boleto = str(int(raw_linha)) if raw_linha.is_integer() else str(raw_linha)
-            else:
-                val_linha_boleto = str(raw_linha).strip()
+            # Extração de texto sem risco de AttributeError
+            raw_cnpj         = extrair_str(idx_cnpj)
+            raw_banco        = extrair_str(idx_banco)
+            raw_categoria    = extrair_str(idx_categoria)
+            val_nota_fiscal  = extrair_str(idx_nota_fiscal)
+            val_linha_boleto = extrair_str(idx_linha_digitavel)
 
-            # Uso das funções customizadas
+            # Extração de valores e datas via funções customizadas
+            raw_valor      = row[idx_valor] if idx_valor is not None and idx_valor < len(row) else 0
+            raw_vencimento = row[idx_vencimento] if idx_vencimento is not None and idx_vencimento < len(row) else None
+
             val_vencimento = normalizar_data(raw_vencimento)
             val_valor      = parse_valor_brl(raw_valor)
             cnpj_limpo     = limpar_cnpj(raw_cnpj)
@@ -768,7 +766,7 @@ def importar_xlsx(request):
             obj_banco      = bancos_cache.get(raw_banco.lower())
             obj_categoria  = categorias_cache.get(raw_categoria.lower())
 
-            # Validação de Relações
+            # Validação das Relações Obrigatórias
             faltantes = []
             if not obj_fornecedor:
                 faltantes.append(f"CNPJ/Fornecedor '{raw_cnpj}' não cadastrado")
@@ -783,7 +781,7 @@ def importar_xlsx(request):
                 erros.append(f"Linha {index}: Problema em -> {', '.join(faltantes)}.")
                 continue
 
-            # Checagem de duplicação
+            # Lógica de Upsert / Checagem de duplicação
             conta_existente = ContaPagar.objects.filter(
                 fornecedor=obj_fornecedor,
                 banco=obj_banco,
@@ -811,7 +809,7 @@ def importar_xlsx(request):
                 
                 continue
 
-            # Criação do novo registro
+            # Inclusão na fila de novos registros
             novas_contas.append(
                 ContaPagar(
                     fornecedor=obj_fornecedor,
@@ -828,7 +826,7 @@ def importar_xlsx(request):
         except Exception as err:
             erros.append(f"Linha {index}: Erro interno ao processar -> {str(err)}")
 
-    # 4. Operações de Banco de Dados
+    # 4. Operações de Banco de Dados Atômicas
     try:
         with transaction.atomic():
             if novas_contas:
