@@ -661,7 +661,7 @@ def salvar_conciliacao_lote(request):
 
     return JsonResponse({'success': False, 'error': 'Método não permitido.'})
 
-
+#novo
 @require_POST
 def importar_xlsx(request):
     if 'arquivo_xlsx' not in request.FILES:
