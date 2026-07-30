@@ -678,27 +678,37 @@ def importar_xlsx(request):
     if not rows or len(rows) < 2:
         return JsonResponse({'sucesso': False, 'erro': 'A planilha está vazia ou não possui dados suficientes.'}, status=400)
 
-    # 1. Mapeamento dos Cabeçalhos (Linha 1)
-    headers = [str(cell).strip().lower() if cell is not None else '' for cell in rows[0]]
+    # 1. Leitura direta de todas as colunas da planilha (Efeito "df.columns" via openpyxl)
+    colunas_planilha = [str(cell).strip() if cell is not None else '' for cell in rows[0]]
+    headers_lower = [col.lower() for col in colunas_planilha]
 
-    def get_col_index(possible_names):
-        for name in possible_names:
-            if name in headers:
-                return headers.index(name)
+    def encontrar_indice(variacoes):
+        for nome in variacoes:
+            if nome in headers_lower:
+                return headers_lower.index(nome)
         return None
 
-    idx_cnpj            = get_col_index(['cnpj', 'cpf/cnpj', 'cnpj_fornecedor', 'cnpj/cpf'])
-    idx_banco           = get_col_index(['banco', 'conta', 'banco/saldo', 'bancosaldo'])
-    idx_categoria       = get_col_index(['categoria', 'classificação', 'classificacao'])
-    idx_valor           = get_col_index(['valor', 'valor (r$)', 'valorpago'])
-    idx_vencimento      = get_col_index(['vencimento', 'data vencimento', 'dt_vencimento'])
-    idx_nota_fiscal     = get_col_index(['nota_fiscal', 'nota fiscal', 'nf', 'num_nota'])
-    idx_linha_digitavel = get_col_index(['linha_digitavel', 'linha digitável', 'linha digitavel', 'linha_boleto', 'codigo_barras'])
+    # Mapeamento com base nas variações aceitas
+    idx_cnpj            = encontrar_indice(['cnpj', 'cpf/cnpj', 'cnpj_fornecedor', 'cnpj/cpf', 'doc_fornecedor', 'documento'])
+    idx_banco           = encontrar_indice(['banco', 'conta', 'banco/saldo', 'bancosaldo', 'conta corrente', 'conta_corrente'])
+    idx_categoria       = encontrar_indice(['categoria', 'classificação', 'classificacao', 'categoria financeira'])
+    idx_valor           = encontrar_indice(['valor', 'valor (r$)', 'valorpago', 'valor_pago', 'valor total'])
+    idx_vencimento      = encontrar_indice(['vencimento', 'data vencimento', 'dt_vencimento', 'data_vencimento', 'dt vencimento'])
+    idx_nota_fiscal     = encontrar_indice(['nota_fiscal', 'nota fiscal', 'nf', 'num_nota', 'numero_nota', 'nº nota'])
+    idx_linha_digitavel = encontrar_indice(['linha_digitavel', 'linha digitável', 'linha digitavel', 'linha_boleto', 'codigo_barras', 'código de barras'])
 
-    if idx_cnpj is None or idx_banco is None or idx_categoria is None or idx_vencimento is None:
+    # Validação dos Campos Obrigatórios
+    obrigatorios_faltantes = []
+    if idx_cnpj is None: obrigatorios_faltantes.append("CNPJ")
+    if idx_banco is None: obrigatorios_faltantes.append("Banco")
+    if idx_categoria is None: obrigatorios_faltantes.append("Categoria")
+    if idx_vencimento is None: obrigatorios_faltantes.append("Vencimento")
+
+    if obrigatorios_faltantes:
         return JsonResponse({
             'sucesso': False, 
-            'erro': 'Cabeçalhos obrigatórios não identificados. Certifique-se de que a planilha possui colunas para CNPJ, Banco, Categoria e Vencimento.'
+            'erro': f"Não foram encontradas as colunas obrigatórias: {', '.join(obrigatorios_faltantes)}. "
+                    f"Colunas identificadas na sua planilha: {colunas_planilha}"
         }, status=400)
 
     # 2. Caching de Categorias, Bancos e Fornecedores
@@ -761,7 +771,7 @@ def importar_xlsx(request):
             erros.append(f"Linha {index}: Problema em -> {', '.join(faltantes)}.")
             continue
 
-        # Busca pelo registro base (pelo núcleo da conta)
+        # Busca pelo registro existente para tratar duplicação/preenchimento
         conta_existente = ContaPagar.objects.filter(
             fornecedor=obj_fornecedor,
             banco=obj_banco,
@@ -773,12 +783,12 @@ def importar_xlsx(request):
         if conta_existente:
             alterado = False
             
-            # Se a Nota Fiscal estava em branco no banco e veio preenchida na planilha
+            # Se estava sem Nota Fiscal no banco e veio preenchida na planilha
             if not conta_existente.nota_fiscal and val_nota_fiscal:
                 conta_existente.nota_fiscal = val_nota_fiscal
                 alterado = True
 
-            # Se a Linha Digitável estava em branco no banco e veio preenchida na planilha
+            # Se estava sem Linha Digitável no banco e veio preenchida na planilha
             if not conta_existente.linha_boleto and val_linha_boleto:
                 conta_existente.linha_boleto = val_linha_boleto
                 alterado = True
@@ -791,7 +801,7 @@ def importar_xlsx(request):
             
             continue
 
-        # Registro não existe -> Cria novo
+        # Novo registro
         novas_contas.append(
             ContaPagar(
                 fornecedor=obj_fornecedor,
@@ -823,6 +833,7 @@ def importar_xlsx(request):
         'duplicados': duplicados_count,
         'erros': erros
     })
+
 
 def baixar_planilha_padrao(request):
     workbook = Workbook()
