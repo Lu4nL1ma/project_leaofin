@@ -685,7 +685,10 @@ def salvar_conciliacao_lote(request):
 
 @require_POST
 def importar_xlsx(request):
-    if 'arquivo_excel' not in request.FILES:
+    # Aceita 'arquivo_xlsx' (usado no form) ou 'arquivo_excel'
+    excel_file = request.FILES.get('arquivo_xlsx') or request.FILES.get('arquivo_excel')
+    
+    if not excel_file:
         return JsonResponse({'sucesso': False, 'erro': 'Nenhum arquivo enviado.'}, status=400)
 
     excel_file = request.FILES['arquivo_excel']
