@@ -39,46 +39,121 @@ from django.views.decorators.http import require_POST
 
 STATUS_VALIDOS = [choice[0] for choice in ContaPagar.STATUS_CHOICES]
 
-def extrair_str(celula):
-    """Converte o valor da célula para string de forma segura, 
-    evitando 'AttributeError: float object has no attribute strip'."""
+def extrair_texto(celula):
+    """Garante que qualquer valor de célula (int, float, None) vire string limpa."""
     if celula is None:
         return ""
-    if isinstance(celula, float):
-        if celula.is_integer():
-            return str(int(celula))
-        return str(celula).strip()
     return str(celula).strip()
 
+def limpar_cnpj(val):
+    """Remove caracteres não numéricos do CNPJ."""
+    import re
+    return re.sub(r'\D', '', extrair_texto(val))
 
-def limpar_cnpj(valor):
-    """ Remove caracteres não numéricos do CNPJ (ex: 00.000.000/0001-00 -> 00000000000100) """
-    if not valor:
-        return ''
-    return re.sub(r'\D', '', str(valor))
+def parse_valor(val):
+    """Converte valores em Decimal do Django."""
+    if isinstance(val, (int, float)):
+        return Decimal(str(val))
+    texto = extrair_texto(val).replace('R$', '').replace('.', '').replace(',', '.').strip()
+    return Decimal(texto) if texto else Decimal('0.00')
 
+def parse_data(val):
+    """Trata datas vindas do Excel (datetime ou texto)."""
+    if isinstance(val, datetime):
+        return val.date()
+    texto = extrair_texto(val)
+    for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%Y-%m-%d %H:%M:%S'):
+        try:
+            return datetime.strptime(texto, fmt).date()
+        except ValueError:
+            pass
+    return None
 
-def parse_valor_brl(valor):
-    """
-    Converte inteiros, floats ou strings em formato BRL/Decimal para Decimal de forma segura.
-    """
-    if valor is None:
-        return Decimal('0.00')
-    if isinstance(valor, (int, float)):
-        return Decimal(str(valor))
-    if isinstance(valor, Decimal):
-        return valor
+@require_POST
+def importar_xlsx(request):
+    # Pega o arquivo do form
+    excel_file = request.FILES.get('arquivo_xlsx')
+    
+    if not excel_file:
+        return JsonResponse({'sucesso': False, 'erro': 'Nenhum arquivo enviado.'}, status=400)
+
+    try:
+        wb = openpyxl.load_workbook(excel_file, data_only=True)
+        sheet = wb.active
         
-    valor_str = str(valor).strip()
-    if not valor_str:
-        return Decimal('0.00')
+        # Mapeamento do cabeçalho (Linha 1)
+        header = [extrair_texto(cell.value).lower() for cell in sheet[1]]
         
-    if ',' in valor_str:
-        # Formato BRL: remove ponto de milhar e troca vírgula por ponto
-        valor_str = valor_str.replace('.', '').replace(',', '.')
-        
-    return Decimal(valor_str)
+        # Procura os índices das colunas essenciais
+        def achar_coluna(nomes):
+            for nome in nomes:
+                if nome in header:
+                    return header.index(nome)
+            return None
 
+        idx_cnpj = achar_coluna(['cnpj', 'cnpj fornecedor', 'cpf/cnpj'])
+        idx_nf = achar_coluna(['nota fiscal', 'nf', 'numero nf'])
+        idx_linha = achar_coluna(['linha digitavel', 'boleto', 'codigo de barras'])
+        idx_valor = achar_coluna(['valor', 'valor (r$)', 'valor total'])
+        idx_venc = achar_coluna(['vencimento', 'data vencimento', 'dt vencimento'])
+
+        if None in (idx_cnpj, idx_valor, idx_venc):
+            return JsonResponse({
+                'sucesso': False, 
+                'erro': 'Planilha inválida. As colunas CNPJ, Valor e Vencimento são obrigatórias.'
+            }, status=400)
+
+        contas_novas = []
+        erros = []
+
+        with transaction.atomic():
+            for row_idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+                if not any(row): 
+                    continue # Pula linha vazia
+
+                cnpj_raw = row[idx_cnpj] if idx_cnpj < len(row) else None
+                cnpj_limpo = limpar_cnpj(cnpj_raw)
+
+                if not cnpj_limpo:
+                    erros.append(f"Linha {row_idx}: CNPJ ausente ou inválido.")
+                    continue
+
+                fornecedor = Fornecedor.objects.filter(cnpj=cnpj_limpo).first()
+                if not fornecedor:
+                    erros.append(f"Linha {row_idx}: Fornecedor com CNPJ {cnpj_limpo} não encontrado.")
+                    continue
+
+                valor = parse_valor(row[idx_valor] if idx_valor < len(row) else 0)
+                vencimento = parse_data(row[idx_venc] if idx_venc < len(row) else None)
+
+                if not vencimento:
+                    erros.append(f"Linha {row_idx}: Data de vencimento inválida.")
+                    continue
+
+                nf = extrair_texto(row[idx_nf]) if idx_nf is not None and idx_nf < len(row) else ""
+                linha_dig = extrair_texto(row[idx_linha]) if idx_linha is not None and idx_linha < len(row) else ""
+
+                contas_novas.append(ContaPagar(
+                    fornecedor=fornecedor,
+                    numero_nota=nf,
+                    linha_digitavel=linha_dig,
+                    valor=valor,
+                    data_vencimento=vencimento,
+                    status='PENDENTE'
+                ))
+
+            if contas_novas:
+                ContaPagar.objects.bulk_create(contas_novas)
+
+        return JsonResponse({
+            'sucesso': True,
+            'importados': len(contas_novas),
+            'duplicados': 0,
+            'erros': erros
+        })
+
+    except Exception as e:
+        return JsonResponse({'sucesso': False, 'erro': f'Erro ao ler arquivo: {str(e)}'}, status=500)
 
 def tela_login(request):
     if request.user.is_authenticated:
@@ -681,133 +756,6 @@ def salvar_conciliacao_lote(request):
             return JsonResponse({'success': False, 'error': f"Erro interno ao salvar lote: {str(e)}"})
 
     return JsonResponse({'success': False, 'error': 'Método não permitido.'})
-
-
-@require_POST
-def importar_xlsx(request):
-    # Aceita 'arquivo_xlsx' (usado no form) ou 'arquivo_excel'
-    excel_file = request.FILES.get('arquivo_xlsx') or request.FILES.get('arquivo_excel')
-    
-    if not excel_file:
-        return JsonResponse({'sucesso': False, 'erro': 'Nenhum arquivo enviado.'}, status=400)
-
-    excel_file = request.FILES['arquivo_excel']
-
-    try:
-        wb = openpyxl.load_workbook(excel_file, data_only=True)
-        sheet = wb.active
-    except Exception as e:
-        return JsonResponse({'sucesso': False, 'erro': f'Erro ao ler o arquivo Excel: {str(e)}'}, status=400)
-
-    # 1. Identificar os cabeçalhos (Primeira linha)
-    first_row = next(sheet.iter_rows(min_row=1, max_row=1, values_only=True), None)
-    
-    if not first_row:
-        return JsonResponse({'sucesso': False, 'erro': 'A planilha está vazia.'}, status=400)
-
-    headers = [str(h).strip().lower() if h is not None else "" for h in first_row]
-
-    # Mapeamento dinâmico de colunas
-    idx_cnpj = None
-    idx_nf = None
-    idx_linha = None
-    idx_valor = None
-    idx_vencimento = None
-
-    for idx, header in enumerate(headers):
-        if 'cnpj' in header or 'fornecedor' in header:
-            idx_cnpj = idx
-        elif 'nota' in header or 'nf' in header:
-            idx_nf = idx
-        elif 'linha' in header or 'digitavel' in header or 'boleto' in header:
-            idx_linha = idx
-        elif 'valor' in header:
-            idx_valor = idx
-        elif 'vencimento' in header or 'data' in header:
-            idx_vencimento = idx
-
-    novas_contas = []
-    contas_para_atualizar = []
-    erros = []
-
-    # 2. Iterar sobre as linhas de dados (a partir da linha 2)
-    for row_idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
-        # Pula linha completamente vazia
-        if not any(row):
-            continue
-
-        try:
-            # Leitura segura usando extrair_str
-            cnpj_raw = extrair_str(row[idx_cnpj]) if idx_cnpj is not None and idx_cnpj < len(row) else ""
-            val_nota_fiscal = extrair_str(row[idx_nf]) if idx_nf is not None and idx_nf < len(row) else ""
-            val_linha_digitavel = extrair_str(row[idx_linha]) if idx_linha is not None and idx_linha < len(row) else ""
-            
-            # Tratamento de CNPJ
-            cnpj_limpo = limpar_cnpj(cnpj_raw)
-            
-            if not cnpj_limpo:
-                continue
-
-            # Busca o fornecedor cadastrado pelo CNPJ
-            obj_fornecedor = Fornecedor.objects.filter(cnpj=cnpj_limpo).first()
-            if not obj_fornecedor:
-                erros.append(f"Linha {row_idx}: Fornecedor com CNPJ {cnpj_raw} não encontrado.")
-                continue
-
-            # Parse seguro de valor e data
-            celula_valor = row[idx_valor] if idx_valor is not None and idx_valor < len(row) else 0
-            val_valor = parse_valor_brl(celula_valor)
-
-            celula_vencimento = row[idx_vencimento] if idx_vencimento is not None and idx_vencimento < len(row) else None
-            val_vencimento = normalizar_data(celula_vencimento)
-
-            # Lógica de Upsert (Atualizar existente ou criar novo)
-            conta_existente = ContaPagar.objects.filter(
-                fornecedor=obj_fornecedor,
-                valor=val_valor,
-                vencimento=val_vencimento
-            ).first()
-
-            if conta_existente:
-                if val_nota_fiscal:
-                    conta_existente.nota_fiscal = val_nota_fiscal
-                if val_linha_digitavel:
-                    conta_existente.linha_digitavel = val_linha_digitavel
-                contas_para_atualizar.append(conta_existente)
-            else:
-                novas_contas.append(
-                    ContaPagar(
-                        fornecedor=obj_fornecedor,
-                        valor=val_valor,
-                        vencimento=val_vencimento,
-                        nota_fiscal=val_nota_fiscal,
-                        linha_digitavel=val_linha_digitavel
-                    )
-                )
-
-        except Exception as e:
-            erros.append(f"Linha {row_idx}: Erro ao processar -> {str(e)}")
-
-    # 3. Operações no Banco de Dados em Bloco
-    try:
-        with transaction.atomic():
-            if novas_contas:
-                ContaPagar.objects.bulk_create(novas_contas)
-            if contas_para_atualizar:
-                ContaPagar.objects.bulk_update(
-                    contas_para_atualizar, 
-                    fields=['nota_fiscal', 'linha_digitavel']
-                )
-    except Exception as db_err:
-        return JsonResponse({'sucesso': False, 'erro': f'Erro ao salvar no banco de dados: {str(db_err)}'}, status=500)
-
-    # 4. Retorno JSON
-    return JsonResponse({
-        'sucesso': True,
-        'criados': len(novas_contas),
-        'atualizados': len(contas_para_atualizar),
-        'erros': erros
-    })
 
 
 def baixar_planilha_padrao(request):
