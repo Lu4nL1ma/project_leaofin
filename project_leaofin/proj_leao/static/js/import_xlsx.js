@@ -46,16 +46,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (!dropzone || !fileInput) return;
 
+    // 1. Clique seguro no dropzone para abrir a janela de seleção
     dropzone.addEventListener('click', (e) => {
-        if (e.target !== fileInput) fileInput.click();
+        // Evita reabrir se clicar diretamente no input invisível
+        if (e.target !== fileInput) {
+            fileInput.click();
+        }
     });
 
+    // 2. Exibição do nome do arquivo selecionado via clique
     fileInput.addEventListener('change', () => {
-        if (fileInput.files.length > 0) {
+        if (fileInput.files && fileInput.files.length > 0) {
             fileNameDiv.textContent = '📄 ' + fileInput.files[0].name;
         }
     });
 
+    // 3. Suporte a Drag & Drop
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
         dropzone.addEventListener(evt, (e) => {
             e.preventDefault();
@@ -66,93 +72,64 @@ document.addEventListener('DOMContentLoaded', function () {
     dropzone.addEventListener('drop', (e) => {
         const files = e.dataTransfer.files;
         if (files && files.length > 0) {
-            const dt = new DataTransfer();
-            dt.items.add(files[0]);
-            fileInput.files = dt.files;
+            fileInput.files = files; // Atribui os arquivos arrastados diretamente ao input
             fileNameDiv.textContent = '📄 ' + files[0].name;
         }
     });
 
-    // Envios via AJAX e Transição Visual de Tela
+    // 4. Envio do Formulário por AJAX (com tratamento defensivo do arquivo)
     if (form) {
         form.addEventListener('submit', function (e) {
             e.preventDefault();
 
+            // Validação no front-end antes de disparar o fetch
             if (!fileInput.files || fileInput.files.length === 0) {
-                alert('Por favor, selecione um arquivo .xlsx.');
+                alert('Por favor, selecione um arquivo .xlsx antes de importar.');
                 return;
             }
 
-            const formData = new FormData(form);
+            // Garante a montagem manual do FormData caso o form.reset() ou outro fator limpe o estado
+            const formData = new FormData();
+            
+            // Pega o token CSRF diretamente do formulário
+            const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]').value;
+            formData.append('csrfmiddlewaretoken', csrfToken);
+            
+            // Anexa explicitamente o arquivo selecionado
+            formData.append('arquivo_xlsx', fileInput.files[0]);
+
             btnImportar.disabled = true;
             btnImportar.textContent = 'Processando...';
 
             fetch(form.action, {
                 method: 'POST',
                 body: formData,
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                headers: { 
+                    'X-Requested-With': 'XMLHttpRequest' 
+                }
             })
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) {
+                    return res.json().then(errData => { throw errData; });
+                }
+                return res.json();
+            })
             .then(data => {
                 btnImportar.disabled = false;
                 btnImportar.textContent = 'Importar';
-
-                // Prepara e exibe a tela de resultados (Passo 2)
                 exibirResultadoNoModal(data);
             })
-            .catch(() => {
+            .catch(err => {
                 btnImportar.disabled = false;
                 btnImportar.textContent = 'Importar';
-                alert('Erro na requisição. Tente novamente.');
+                
+                // Se a view retornou um JSON de erro (ex: Fornecedor não encontrado)
+                if (err && err.erro) {
+                    exibirResultadoNoModal(err);
+                } else {
+                    alert('Erro na requisição ou resposta inválida do servidor.');
+                }
             });
         });
     }
 });
-
-// Monta o visual do Passo 2 e aplica a animação
-function exibirResultadoNoModal(data) {
-    const stepUpload = document.getElementById('modalStepUpload');
-    const stepResultado = document.getElementById('modalStepResultado');
-    const conteudo = document.getElementById('conteudoResultado');
-
-    let html = '';
-
-    if (data.sucesso) {
-        html += `
-            <div class="import-summary-grid">
-                <div class="summary-card success">
-                    <span class="number">${data.importados}</span>
-                    <span class="label">Importadas</span>
-                </div>
-                <div class="summary-card info">
-                    <span class="number">${data.duplicados}</span>
-                    <span class="label">Duplicadas</span>
-                </div>
-            </div>
-        `;
-
-        if (data.erros && data.erros.length > 0) {
-            html += `
-                <div class="error-list-container">
-                    <strong>⚠️ Linhas com inconsistências (${data.erros.length}):</strong>
-                    <ul>
-                        ${data.erros.map(e => `<li>${e}</li>`).join('')}
-                    </ul>
-                </div>
-            `;
-        }
-    } else {
-        html = `
-            <div style="padding: 16px; background-color: #fce8e6; color: #c5221f; border-radius: 8px;">
-                ❌ <strong>Erro:</strong> ${data.erro}
-            </div>
-        `;
-    }
-
-    conteudo.innerHTML = html;
-
-    // Efeito visual de troca de telas
-    stepUpload.style.display = 'none';
-    stepResultado.style.display = 'block';
-    stepResultado.classList.add('fade-in');
-}
