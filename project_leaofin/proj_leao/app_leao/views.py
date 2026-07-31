@@ -39,6 +39,18 @@ from django.views.decorators.http import require_POST
 
 STATUS_VALIDOS = [choice[0] for choice in ContaPagar.STATUS_CHOICES]
 
+def extrair_str(celula):
+    """Converte o valor da célula para string de forma segura, 
+    evitando 'AttributeError: float object has no attribute strip'."""
+    if celula is None:
+        return ""
+    if isinstance(celula, float):
+        if celula.is_integer():
+            return str(int(celula))
+        return str(celula).strip()
+    return str(celula).strip()
+
+
 def limpar_cnpj(valor):
     """ Remove caracteres não numéricos do CNPJ (ex: 00.000.000/0001-00 -> 00000000000100) """
     if not valor:
@@ -661,177 +673,113 @@ def salvar_conciliacao_lote(request):
 
     return JsonResponse({'success': False, 'error': 'Método não permitido.'})
 
-#novo
 @require_POST
 def importar_xlsx(request):
-    if 'arquivo_xlsx' not in request.FILES:
+    if 'arquivo_excel' not in request.FILES:
         return JsonResponse({'sucesso': False, 'erro': 'Nenhum arquivo enviado.'}, status=400)
 
-    excel_file = request.FILES['arquivo_xlsx']
+    excel_file = request.FILES['arquivo_excel']
 
     try:
         wb = openpyxl.load_workbook(excel_file, data_only=True)
         sheet = wb.active
-        rows = list(sheet.iter_rows(values_only=True))
     except Exception as e:
         return JsonResponse({'sucesso': False, 'erro': f'Erro ao ler o arquivo Excel: {str(e)}'}, status=400)
 
-    if not rows or len(rows) < 2:
-        return JsonResponse({'sucesso': False, 'erro': 'A planilha está vazia ou não possui dados suficientes.'}, status=400)
-
-    # 1. Leitura e Mapeamento dos Cabeçalhos
-    colunas_planilha = [str(cell).strip() if cell is not None else '' for cell in rows[0]]
-    headers_lower = [col.lower() for col in colunas_planilha]
-
-    def encontrar_indice(variacoes):
-        for nome in variacoes:
-            if nome in headers_lower:
-                return headers_lower.index(nome)
-        return None
-
-    idx_cnpj            = encontrar_indice(['fornecedor', 'cnpj', 'cpf/cnpj', 'cnpj_fornecedor', 'cnpj/cpf', 'doc_fornecedor', 'documento', 'razao social', 'razão social'])
-    idx_banco           = encontrar_indice(['banco', 'conta', 'banco/saldo', 'bancosaldo', 'conta corrente', 'conta_corrente'])
-    idx_categoria       = encontrar_indice(['categoria', 'classificação', 'classificacao', 'categoria financeira'])
-    idx_valor           = encontrar_indice(['valor', 'valor (r$)', 'valorpago', 'valor_pago', 'valor total'])
-    idx_vencimento      = encontrar_indice(['vencimento', 'data vencimento', 'dt_vencimento', 'data_vencimento', 'dt vencimento'])
-    idx_nota_fiscal     = encontrar_indice(['nota_fiscal', 'nota fiscal', 'nf', 'num_nota', 'numero_nota', 'nº nota'])
-    idx_linha_digitavel = encontrar_indice(['linha_digitavel', 'linha digitável', 'linha digitavel', 'linha_boleto', 'codigo_barras', 'código de barras'])
-
-    obrigatorios_faltantes = []
-    if idx_cnpj is None: obrigatorios_faltantes.append("Fornecedor/CNPJ")
-    if idx_banco is None: obrigatorios_faltantes.append("Banco")
-    if idx_categoria is None: obrigatorios_faltantes.append("Categoria")
-    if idx_vencimento is None: obrigatorios_faltantes.append("Vencimento")
-
-    if obrigatorios_faltantes:
-        return JsonResponse({
-            'sucesso': False, 
-            'erro': f"Não foram encontradas as colunas obrigatórias: {', '.join(obrigatorios_faltantes)}. Colunas identificadas: {colunas_planilha}"
-        }, status=400)
-
-    # 2. Caching por CNPJ e Nomes
-    fornecedores_cache = {
-        limpar_cnpj(f.cnpj): f 
-        for f in Fornecedor.objects.all() if getattr(f, 'cnpj', None)
-    }
+    # 1. Identificar os cabeçalhos (Primeira linha)
+    headers = []
+    first_row = next(sheet.iter_rows(min_row=1, max_row=1, values_only=True), None)
     
-    bancos_cache = {
-        b.nome.strip().lower(): b 
-        for b in BancoSaldo.objects.all() if getattr(b, 'nome', None)
-    }
-    
-    categorias_cache = {
-        c.nome.strip().lower(): c 
-        for c in Categoria.objects.all() if getattr(c, 'nome', None)
-    }
+    if not first_row:
+        return JsonResponse({'sucesso': False, 'erro': 'A planilha está vazia.'}, status=400)
+
+    headers = [str(h).strip().lower() if h is not None else "" for h in first_row]
+
+    # Mapeamento dinâmico de colunas
+    idx_cnpj = None
+    idx_nf = None
+    idx_linha = None
+    idx_valor = None
+    idx_vencimento = None
+
+    for idx, header in enumerate(headers):
+        if 'cnpj' in header or 'fornecedor' in header:
+            idx_cnpj = idx
+        elif 'nota' in header or 'nf' in header:
+            idx_nf = idx
+        elif 'linha' in header or 'digitavel' in header or 'boleto' in header:
+            idx_linha = idx
+        elif 'valor' in header:
+            idx_valor = idx
+        elif 'vencimento' in header or 'data' in header:
+            idx_vencimento = idx
 
     novas_contas = []
     contas_para_atualizar = []
     erros = []
-    importados_count = 0
-    atualizados_count = 0
-    duplicados_count = 0
 
-    # 3. Processamento Linha por Linha
-    for index, row in enumerate(rows[1:], start=2):
+    # 2. Iterar sobre as linhas de dados (a partir da linha 2)
+    for row_idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+        # Pula linha completamente vazia
         if not any(row):
             continue
 
         try:
-            # Helper universal de extração segura de string
-            def extrair_str(idx):
-                if idx is None or idx >= len(row) or row[idx] is None:
-                    return ''
-                val = row[idx]
-                if isinstance(val, float):
-                    return str(int(val)) if val.is_integer() else str(val)
-                return str(val).strip()
-
-            # Extração de texto sem risco de AttributeError
-            raw_cnpj         = extrair_str(idx_cnpj)
-            raw_banco        = extrair_str(idx_banco)
-            raw_categoria    = extrair_str(idx_categoria)
-            val_nota_fiscal  = extrair_str(idx_nota_fiscal)
-            val_linha_digitavel = extrair_str(idx_linha_digitavel)
-
-            # Extração de valores e datas via funções customizadas
-            raw_valor      = row[idx_valor] if idx_valor is not None and idx_valor < len(row) else 0
-            raw_vencimento = row[idx_vencimento] if idx_vencimento is not None and idx_vencimento < len(row) else None
-
-            val_vencimento = normalizar_data(raw_vencimento)
-            val_valor      = parse_valor_brl(raw_valor)
-            cnpj_limpo     = limpar_cnpj(raw_cnpj)
-
-            obj_fornecedor = fornecedores_cache.get(cnpj_limpo)
-            obj_banco      = bancos_cache.get(raw_banco.lower())
-            obj_categoria  = categorias_cache.get(raw_categoria.lower())
-
-            # Validação das Relações Obrigatórias
-            faltantes = []
-            if not obj_fornecedor:
-                faltantes.append(f"CNPJ/Fornecedor '{raw_cnpj}' não cadastrado")
-            if not obj_banco:
-                faltantes.append(f"Banco '{raw_banco}'")
-            if not obj_categoria:
-                faltantes.append(f"Categoria '{raw_categoria}'")
-            if not val_vencimento:
-                faltantes.append("Vencimento inválido/ausente")
-
-            if faltantes:
-                erros.append(f"Linha {index}: Problema em -> {', '.join(faltantes)}.")
+            # Leitura segura com extrair_str
+            cnpj_raw = extrair_str(row[idx_cnpj]) if idx_cnpj is not None and idx_cnpj < len(row) else ""
+            val_nota_fiscal = extrair_str(row[idx_nf]) if idx_nf is not None and idx_nf < len(row) else ""
+            val_linha_digitavel = extrair_str(row[idx_linha]) if idx_linha is not None and idx_linha < len(row) else ""
+            
+            # Tratamento de CNPJ (limpeza de caracteres)
+            cnpj_limpo = limpar_cnpj(cnpj_raw) if 'limpar_cnpj' in globals() else cnpj_raw.replace('.', '').replace('/', '').replace('-', '')
+            
+            if not cnpj_limpo:
                 continue
 
-            # Lógica de Upsert / Checagem de duplicação
+            # Busca o fornecedor cadastrado pelo CNPJ
+            obj_fornecedor = Fornecedor.objects.filter(cnpj=cnpj_limpo).first()
+            if not obj_fornecedor:
+                erros.append(f"Linha {row_idx}: Fornecedor com CNPJ {cnpj_raw} não encontrado.")
+                continue
+
+            # Parse de valor e data
+            val_valor = parse_valor_brl(row[idx_valor]) if (idx_valor is not None and idx_valor < len(row) and 'parse_valor_brl' in globals()) else 0
+            val_vencimento = normalizar_data(row[idx_vencimento]) if (idx_vencimento is not None and idx_vencimento < len(row) and 'normalizar_data' in globals()) else None
+
+            # Lógica de Upsert (Atualizar existente ou criar novo)
             conta_existente = ContaPagar.objects.filter(
                 fornecedor=obj_fornecedor,
-                banco=obj_banco,
-                categoria=obj_categoria,
                 valor=val_valor,
                 vencimento=val_vencimento
             ).first()
 
             if conta_existente:
-                alterado = False
-                
-                if not conta_existente.nota_fiscal and val_nota_fiscal:
+                # Atualiza campos
+                if val_nota_fiscal:
                     conta_existente.nota_fiscal = val_nota_fiscal
-                    alterado = True
-
-                if not conta_existente.linha_digitavel and val_linha_digitavel:
+                if val_linha_digitavel:
                     conta_existente.linha_digitavel = val_linha_digitavel
-                    alterado = True
-
-                if alterado:
-                    contas_para_atualizar.append(conta_existente)
-                    atualizados_count += 1
-                else:
-                    duplicados_count += 1
-                
-                continue
-
-            # Inclusão na fila de novos registros
-            novas_contas.append(
-                ContaPagar(
-                    fornecedor=obj_fornecedor,
-                    banco=obj_banco,
-                    categoria=obj_categoria,
-                    valor=val_valor,
-                    vencimento=val_vencimento,
-                    nota_fiscal=val_nota_fiscal,
-                    linha_digitavel=val_linha_digitavel
+                contas_para_atualizar.append(conta_existente)
+            else:
+                # Cria novo objeto com linha_digitavel
+                novas_contas.append(
+                    ContaPagar(
+                        fornecedor=obj_fornecedor,
+                        valor=val_valor,
+                        vencimento=val_vencimento,
+                        nota_fiscal=val_nota_fiscal,
+                        linha_digitavel=val_linha_digitavel
+                    )
                 )
-            )
-            importados_count += 1
 
-        except Exception as err:
-            erros.append(f"Linha {index}: Erro interno ao processar -> {str(err)}")
+        except Exception as e:
+            erros.append(f"Linha {row_idx}: Erro ao processar -> {str(e)}")
 
-    # 4. Operações de Banco de Dados Atômicas
+    # 3. Operações no Banco de Dados em Bloco
     try:
         with transaction.atomic():
             if novas_contas:
                 ContaPagar.objects.bulk_create(novas_contas)
-            
             if contas_para_atualizar:
                 ContaPagar.objects.bulk_update(
                     contas_para_atualizar, 
@@ -840,11 +788,11 @@ def importar_xlsx(request):
     except Exception as db_err:
         return JsonResponse({'sucesso': False, 'erro': f'Erro ao salvar no banco de dados: {str(db_err)}'}, status=500)
 
+    # 4. Retorno JSON
     return JsonResponse({
         'sucesso': True,
-        'importados': importados_count,
-        'atualizados': atualizados_count,
-        'duplicados': duplicados_count,
+        'criados': len(novas_contas),
+        'atualizados': len(contas_para_atualizar),
         'erros': erros
     })
 
