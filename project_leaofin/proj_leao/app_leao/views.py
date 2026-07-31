@@ -97,6 +97,10 @@ def parse_data(val):
     return None
 
 
+# ==========================================
+# VIEW DE IMPORTAÇÃO COM UPSERT
+# ==========================================
+
 @require_POST
 def importar_xlsx(request):
     excel_file = request.FILES.get('arquivo_xlsx') or request.FILES.get('arquivo_excel')
@@ -124,9 +128,9 @@ def importar_xlsx(request):
         idx_valor = achar_coluna(['valor', 'valor (r$)', 'valor total', 'valor_total'])
         idx_venc = achar_coluna(['vencimento', 'data vencimento', 'dt vencimento', 'data_vencimento', 'venc'])
         idx_categoria = achar_coluna(['categoria', 'cat', 'categoria_nome'])
-        idx_banco = achar_coluna(['banco', 'conta bancaria', 'banco_nome'])
+        idx_banco = achar_coluna(['banco', 'conta bancaria', 'banco_nome', 'bancosaldo'])
 
-        # Validação das colunas obrigatórias
+        # Validação de presença das colunas obrigatórias no cabeçalho
         colunas_faltantes = []
         if idx_cnpj is None: colunas_faltantes.append('CNPJ')
         if idx_valor is None: colunas_faltantes.append('Valor')
@@ -177,19 +181,24 @@ def importar_xlsx(request):
                     erros.append(f"Linha {row_idx}: Categoria '{nome_categoria}' não encontrada no sistema.")
                     continue
 
-                # --- 3. VALIDAR BANCO ---
+                # --- 3. VALIDAR BANCOSALDO ---
                 nome_banco = extrair_texto(row[idx_banco] if idx_banco < len(row) else "")
                 if not nome_banco:
                     erros.append(f"Linha {row_idx}: Banco não informado.")
                     continue
 
-                # Busca banco por nome ou código (ex: '237' ou 'Bradesco')
-                banco = Banco.objects.filter(nome__icontains=nome_banco).first()
-                if not banco and hasattr(Banco, 'codigo'):
-                    banco = Banco.objects.filter(codigo__iexact=nome_banco).first()
+                banco_saldo = None
+                if hasattr(BancoSaldo, 'nome'):
+                    banco_saldo = BancoSaldo.objects.filter(nome__icontains=nome_banco).first()
+                if not banco_saldo and hasattr(BancoSaldo, 'descricao'):
+                    banco_saldo = BancoSaldo.objects.filter(descricao__icontains=nome_banco).first()
+                if not banco_saldo and hasattr(BancoSaldo, 'banco'):
+                    banco_saldo = BancoSaldo.objects.filter(banco__icontains=nome_banco).first()
+                if not banco_saldo and nome_banco.isdigit():
+                    banco_saldo = BancoSaldo.objects.filter(pk=nome_banco).first()
 
-                if not banco:
-                    erros.append(f"Linha {row_idx}: Banco '{nome_banco}' não encontrado no sistema.")
+                if not banco_saldo:
+                    erros.append(f"Linha {row_idx}: Banco/Conta '{nome_banco}' não encontrado no sistema.")
                     continue
 
                 # --- 4. VALIDAR VALOR E VENCIMENTO ---
@@ -204,23 +213,22 @@ def importar_xlsx(request):
                 nf = extrair_texto(row[idx_nf]) if idx_nf is not None and idx_nf < len(row) else ""
                 linha_dig = extrair_texto(row[idx_linha]) if idx_linha is not None and idx_linha < len(row) else ""
 
-                # --- 6. CHECK DE DUPLICIDADE E PREENCHIMENTO PARCIAL ---
-                # Identifica a conta pelo Fornecedor + Vencimento + Valor
+                # --- 6. CHECK DE DUPLICIDADE E ATUALIZAÇÃO PARCIAL ---
+                # Ajuste os nomes dos atributos 'vencimento', 'nota_fiscal' ou 'banco' 
+                # se no seu modelo ContaPagar estiverem nomeados diferente!
                 conta_existente = ContaPagar.objects.filter(
                     fornecedor=fornecedor,
-                    vencimento=vencimento,      # Ajuste se no seu model for 'data_vencimento'
+                    vencimento=vencimento,
                     valor=valor
                 ).first()
 
                 if conta_existente:
                     atualizou = False
 
-                    # Se a Nota Fiscal no banco estiver vazia e recebemos uma na planilha
-                    if not conta_existente.nota_fiscal and nf: # Ajuste se for 'numero_nota'
+                    if not conta_existente.nota_fiscal and nf:
                         conta_existente.nota_fiscal = nf
                         atualizou = True
 
-                    # Se a Linha Digitável no banco estiver vazia e recebemos uma na planilha
                     if not conta_existente.linha_digitavel and linha_dig:
                         conta_existente.linha_digitavel = linha_dig
                         atualizou = True
@@ -234,15 +242,14 @@ def importar_xlsx(request):
                 contas_novas.append(ContaPagar(
                     fornecedor=fornecedor,
                     categoria=categoria,
-                    banco=banco,
-                    nota_fiscal=nf,              # Ajuste para 'numero_nota' se necessário
+                    banco=banco_saldo,          # Atribui o objeto BancoSaldo
+                    nota_fiscal=nf,
                     linha_digitavel=linha_dig,
                     valor=valor,
-                    vencimento=vencimento,       # Ajuste para 'data_vencimento' se necessário
+                    vencimento=vencimento,
                     status='PENDENTE'
                 ))
 
-            # Gravação em massa dos novos registros
             if contas_novas:
                 ContaPagar.objects.bulk_create(contas_novas)
 
@@ -255,7 +262,6 @@ def importar_xlsx(request):
 
     except Exception as e:
         return JsonResponse({'sucesso': False, 'erro': f'Erro ao ler arquivo: {str(e)}'}, status=500)
-
     
 def tela_login(request):
     if request.user.is_authenticated:
