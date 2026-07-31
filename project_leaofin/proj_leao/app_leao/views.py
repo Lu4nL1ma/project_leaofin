@@ -58,16 +58,25 @@ def limpar_cnpj(valor):
     return re.sub(r'\D', '', str(valor))
 
 
-def parse_valor_brl(valor_str):
+def parse_valor_brl(valor):
     """
-    Converte texto de valor em formato brasileiro (2.089,78 ou 2089,78)
-    ou já em formato com ponto (2089.78) para Decimal.
-    Levanta InvalidOperation se o texto não for um número válido.
+    Converte inteiros, floats ou strings em formato BRL/Decimal para Decimal de forma segura.
     """
-    valor_str = valor_str.strip()
+    if valor is None:
+        return Decimal('0.00')
+    if isinstance(valor, (int, float)):
+        return Decimal(str(valor))
+    if isinstance(valor, Decimal):
+        return valor
+        
+    valor_str = str(valor).strip()
+    if not valor_str:
+        return Decimal('0.00')
+        
     if ',' in valor_str:
-        # formato brasileiro: remove separador de milhar (.) e troca decimal (,) por (.)
+        # Formato BRL: remove ponto de milhar e troca vírgula por ponto
         valor_str = valor_str.replace('.', '').replace(',', '.')
+        
     return Decimal(valor_str)
 
 
@@ -673,6 +682,7 @@ def salvar_conciliacao_lote(request):
 
     return JsonResponse({'success': False, 'error': 'Método não permitido.'})
 
+
 @require_POST
 def importar_xlsx(request):
     if 'arquivo_excel' not in request.FILES:
@@ -687,7 +697,6 @@ def importar_xlsx(request):
         return JsonResponse({'sucesso': False, 'erro': f'Erro ao ler o arquivo Excel: {str(e)}'}, status=400)
 
     # 1. Identificar os cabeçalhos (Primeira linha)
-    headers = []
     first_row = next(sheet.iter_rows(min_row=1, max_row=1, values_only=True), None)
     
     if not first_row:
@@ -725,13 +734,13 @@ def importar_xlsx(request):
             continue
 
         try:
-            # Leitura segura com extrair_str
+            # Leitura segura usando extrair_str
             cnpj_raw = extrair_str(row[idx_cnpj]) if idx_cnpj is not None and idx_cnpj < len(row) else ""
             val_nota_fiscal = extrair_str(row[idx_nf]) if idx_nf is not None and idx_nf < len(row) else ""
             val_linha_digitavel = extrair_str(row[idx_linha]) if idx_linha is not None and idx_linha < len(row) else ""
             
-            # Tratamento de CNPJ (limpeza de caracteres)
-            cnpj_limpo = limpar_cnpj(cnpj_raw) if 'limpar_cnpj' in globals() else cnpj_raw.replace('.', '').replace('/', '').replace('-', '')
+            # Tratamento de CNPJ
+            cnpj_limpo = limpar_cnpj(cnpj_raw)
             
             if not cnpj_limpo:
                 continue
@@ -742,9 +751,12 @@ def importar_xlsx(request):
                 erros.append(f"Linha {row_idx}: Fornecedor com CNPJ {cnpj_raw} não encontrado.")
                 continue
 
-            # Parse de valor e data
-            val_valor = parse_valor_brl(row[idx_valor]) if (idx_valor is not None and idx_valor < len(row) and 'parse_valor_brl' in globals()) else 0
-            val_vencimento = normalizar_data(row[idx_vencimento]) if (idx_vencimento is not None and idx_vencimento < len(row) and 'normalizar_data' in globals()) else None
+            # Parse seguro de valor e data
+            celula_valor = row[idx_valor] if idx_valor is not None and idx_valor < len(row) else 0
+            val_valor = parse_valor_brl(celula_valor)
+
+            celula_vencimento = row[idx_vencimento] if idx_vencimento is not None and idx_vencimento < len(row) else None
+            val_vencimento = normalizar_data(celula_vencimento)
 
             # Lógica de Upsert (Atualizar existente ou criar novo)
             conta_existente = ContaPagar.objects.filter(
@@ -754,14 +766,12 @@ def importar_xlsx(request):
             ).first()
 
             if conta_existente:
-                # Atualiza campos
                 if val_nota_fiscal:
                     conta_existente.nota_fiscal = val_nota_fiscal
                 if val_linha_digitavel:
                     conta_existente.linha_digitavel = val_linha_digitavel
                 contas_para_atualizar.append(conta_existente)
             else:
-                # Cria novo objeto com linha_digitavel
                 novas_contas.append(
                     ContaPagar(
                         fornecedor=obj_fornecedor,
