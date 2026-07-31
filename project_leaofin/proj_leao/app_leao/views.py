@@ -63,15 +63,37 @@ def parse_valor(val):
     return Decimal(texto) if texto else Decimal('0.00')
 
 def parse_data(val):
-    """Trata datas vindas do Excel (obj datetime ou string)."""
+    """Trata datas do Excel (datetime, date, serial de dias do Excel ou vários formatos de texto)."""
+    if not val:
+        return None
+
+    # 1. Se já for objeto datetime ou date do Python
     if isinstance(val, datetime):
         return val.date()
-    texto = extrair_texto(val)
-    for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%Y-%m-%d %H:%M:%S', '%d-%m-%Y'):
+    if isinstance(val, date):
+        return val
+
+    # 2. Se for número de série do Excel (ex: 45123)
+    if isinstance(val, (int, float)):
+        try:
+            return openpyxl.utils.datetime.from_excel(val).date()
+        except Exception:
+            pass
+
+    # 3. Se for string, limpa e testa os formatos mais comuns
+    texto = extrair_texto(val).split(' ')[0] # Pega só a data se tiver hora junta
+    
+    formatos = [
+        '%d/%m/%Y', '%Y-%m-%d', '%d-%m-%Y', '%d.%m.%Y',
+        '%d/%m/%y', '%Y/%m/%d', '%m/%d/%Y'
+    ]
+
+    for fmt in formatos:
         try:
             return datetime.strptime(texto, fmt).date()
         except ValueError:
             pass
+
     return None
 
 
