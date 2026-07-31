@@ -97,13 +97,8 @@ def parse_data(val):
     return None
 
 
-# ==========================================
-# VIEW DE IMPORTAÇÃO
-# ==========================================
-
 @require_POST
 def importar_xlsx(request):
-    # Captura o arquivo enviado via FormData
     excel_file = request.FILES.get('arquivo_xlsx') or request.FILES.get('arquivo_excel')
     
     if not excel_file:
@@ -113,39 +108,48 @@ def importar_xlsx(request):
         wb = openpyxl.load_workbook(excel_file, data_only=True)
         sheet = wb.active
         
-        # Leitura e normalização do cabeçalho (Linha 1)
+        # Cabeçalho padronizado em minúsculas
         header = [extrair_texto(cell.value).lower() for cell in sheet[1]]
         
-        # Busca flexível pelos nomes das colunas
         def achar_coluna(nomes):
             for nome in nomes:
                 if nome in header:
                     return header.index(nome)
             return None
 
+        # Mapeamento dinâmico das colunas
         idx_cnpj = achar_coluna(['cnpj', 'cnpj fornecedor', 'cpf/cnpj', 'fornecedor_cnpj'])
-        idx_nf = achar_coluna(['nota fiscal', 'nf', 'numero nf', 'num_nota'])
+        idx_nf = achar_coluna(['nota fiscal', 'nf', 'numero nf', 'num_nota', 'nota_fiscal'])
         idx_linha = achar_coluna(['linha digitavel', 'boleto', 'codigo de barras', 'linha_digitavel'])
         idx_valor = achar_coluna(['valor', 'valor (r$)', 'valor total', 'valor_total'])
-        idx_venc = achar_coluna(['vencimento', 'data vencimento', 'dt vencimento', 'data_vencimento'])
+        idx_venc = achar_coluna(['vencimento', 'data vencimento', 'dt vencimento', 'data_vencimento', 'venc'])
+        idx_categoria = achar_coluna(['categoria', 'cat', 'categoria_nome'])
+        idx_banco = achar_coluna(['banco', 'conta bancaria', 'banco_nome'])
 
-        # Validação de colunas obrigatórias
-        if None in (idx_cnpj, idx_valor, idx_venc):
+        # Validação das colunas obrigatórias
+        colunas_faltantes = []
+        if idx_cnpj is None: colunas_faltantes.append('CNPJ')
+        if idx_valor is None: colunas_faltantes.append('Valor')
+        if idx_venc is None: colunas_faltantes.append('Vencimento')
+        if idx_categoria is None: colunas_faltantes.append('Categoria')
+        if idx_banco is None: colunas_faltantes.append('Banco')
+
+        if colunas_faltantes:
             return JsonResponse({
                 'sucesso': False, 
-                'erro': 'Planilha inválida. As colunas CNPJ, Valor e Vencimento são obrigatórias.'
+                'erro': f'Planilha inválida. As colunas a seguir são obrigatórias: {", ".join(colunas_faltantes)}.'
             }, status=400)
 
         contas_novas = []
+        contas_atualizadas = 0
         erros = []
 
         with transaction.atomic():
             for row_idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
-                # Pula linhas inteiramente vazias
                 if not any(row): 
                     continue
 
-                # 1. CNPJ e Busca Flexível do Fornecedor
+                # --- 1. VALIDAR FORNECEDOR ---
                 cnpj_raw = row[idx_cnpj] if idx_cnpj < len(row) else None
                 cnpj_limpo = limpar_cnpj(cnpj_raw)
 
@@ -153,21 +157,42 @@ def importar_xlsx(request):
                     erros.append(f"Linha {row_idx}: CNPJ ausente ou inválido.")
                     continue
 
-                # Busca flexível: tenta limpo ('29124964000123'), formatado ('29.124.964/0001-23') ou contendo a numeração
                 cnpj_formatado = formatar_cnpj(cnpj_limpo)
-                fornecedor = Fornecedor.objects.filter(
-                    cnpj__in=[cnpj_limpo, cnpj_formatado]
-                ).first()
-
+                fornecedor = Fornecedor.objects.filter(cnpj__in=[cnpj_limpo, cnpj_formatado]).first()
                 if not fornecedor:
-                    # Segunda tentativa: busca parcial ignorando caracteres invisíveis/espaços
                     fornecedor = Fornecedor.objects.filter(cnpj__icontains=cnpj_limpo).first()
 
                 if not fornecedor:
                     erros.append(f"Linha {row_idx}: Fornecedor com CNPJ {cnpj_limpo} não encontrado.")
                     continue
 
-                # 2. Processamento do Valor e Data de Vencimento
+                # --- 2. VALIDAR CATEGORIA ---
+                nome_categoria = extrair_texto(row[idx_categoria] if idx_categoria < len(row) else "")
+                if not nome_categoria:
+                    erros.append(f"Linha {row_idx}: Categoria não informada.")
+                    continue
+
+                categoria = Categoria.objects.filter(nome__iexact=nome_categoria).first()
+                if not categoria:
+                    erros.append(f"Linha {row_idx}: Categoria '{nome_categoria}' não encontrada no sistema.")
+                    continue
+
+                # --- 3. VALIDAR BANCO ---
+                nome_banco = extrair_texto(row[idx_banco] if idx_banco < len(row) else "")
+                if not nome_banco:
+                    erros.append(f"Linha {row_idx}: Banco não informado.")
+                    continue
+
+                # Busca banco por nome ou código (ex: '237' ou 'Bradesco')
+                banco = Banco.objects.filter(nome__icontains=nome_banco).first()
+                if not banco and hasattr(Banco, 'codigo'):
+                    banco = Banco.objects.filter(codigo__iexact=nome_banco).first()
+
+                if not banco:
+                    erros.append(f"Linha {row_idx}: Banco '{nome_banco}' não encontrado no sistema.")
+                    continue
+
+                # --- 4. VALIDAR VALOR E VENCIMENTO ---
                 valor = parse_valor(row[idx_valor] if idx_valor < len(row) else 0)
                 vencimento = parse_data(row[idx_venc] if idx_venc < len(row) else None)
 
@@ -175,28 +200,56 @@ def importar_xlsx(request):
                     erros.append(f"Linha {row_idx}: Data de vencimento inválida.")
                     continue
 
-                # 3. Campos Opcionais
+                # --- 5. DADOS OPCIONAIS ---
                 nf = extrair_texto(row[idx_nf]) if idx_nf is not None and idx_nf < len(row) else ""
                 linha_dig = extrair_texto(row[idx_linha]) if idx_linha is not None and idx_linha < len(row) else ""
 
-                # Instancia o registro
+                # --- 6. CHECK DE DUPLICIDADE E PREENCHIMENTO PARCIAL ---
+                # Identifica a conta pelo Fornecedor + Vencimento + Valor
+                conta_existente = ContaPagar.objects.filter(
+                    fornecedor=fornecedor,
+                    vencimento=vencimento,      # Ajuste se no seu model for 'data_vencimento'
+                    valor=valor
+                ).first()
+
+                if conta_existente:
+                    atualizou = False
+
+                    # Se a Nota Fiscal no banco estiver vazia e recebemos uma na planilha
+                    if not conta_existente.nota_fiscal and nf: # Ajuste se for 'numero_nota'
+                        conta_existente.nota_fiscal = nf
+                        atualizou = True
+
+                    # Se a Linha Digitável no banco estiver vazia e recebemos uma na planilha
+                    if not conta_existente.linha_digitavel and linha_dig:
+                        conta_existente.linha_digitavel = linha_dig
+                        atualizou = True
+
+                    if atualizou:
+                        conta_existente.save()
+                        contas_atualizadas += 1
+                    continue
+
+                # --- 7. CRIAR NOVA CONTA ---
                 contas_novas.append(ContaPagar(
                     fornecedor=fornecedor,
-                    nota_fiscal=nf,
+                    categoria=categoria,
+                    banco=banco,
+                    nota_fiscal=nf,              # Ajuste para 'numero_nota' se necessário
                     linha_digitavel=linha_dig,
                     valor=valor,
-                    vencimento=vencimento,
+                    vencimento=vencimento,       # Ajuste para 'data_vencimento' se necessário
                     status='PENDENTE'
                 ))
 
-            # Gravação em lote se houver registros válidos
+            # Gravação em massa dos novos registros
             if contas_novas:
                 ContaPagar.objects.bulk_create(contas_novas)
 
         return JsonResponse({
             'sucesso': True,
             'importados': len(contas_novas),
-            'duplicados': 0,
+            'atualizados': contas_atualizadas,
             'erros': erros
         })
 
