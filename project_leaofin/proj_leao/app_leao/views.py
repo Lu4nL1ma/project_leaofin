@@ -182,10 +182,10 @@ def importar_xlsx(request):
                 # Instancia o registro
                 contas_novas.append(ContaPagar(
                     fornecedor=fornecedor,
-                    numero_nota=nf,
+                    nota_fiscal=nf,
                     linha_digitavel=linha_dig,
                     valor=valor,
-                    data_vencimento=vencimento,
+                    vencimento=vencimento,
                     status='PENDENTE'
                 ))
 
