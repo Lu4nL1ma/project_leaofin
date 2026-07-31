@@ -47,32 +47,42 @@ def extrair_texto(celula):
 
 def limpar_cnpj(val):
     """Remove caracteres não numéricos do CNPJ."""
-    import re
     return re.sub(r'\D', '', extrair_texto(val))
 
+def formatar_cnpj(c):
+    """Insere a pontuação padrão no CNPJ limpo (ex: 00.000.000/0001-00)."""
+    if len(c) == 14:
+        return f"{c[:2]}.{c[2:5]}.{c[5:8]}/{c[8:12]}-{c[12:]}"
+    return c
+
 def parse_valor(val):
-    """Converte valores em Decimal do Django."""
+    """Converte valores em Decimal do Django tratando formatação BRL."""
     if isinstance(val, (int, float)):
         return Decimal(str(val))
     texto = extrair_texto(val).replace('R$', '').replace('.', '').replace(',', '.').strip()
     return Decimal(texto) if texto else Decimal('0.00')
 
 def parse_data(val):
-    """Trata datas vindas do Excel (datetime ou texto)."""
+    """Trata datas vindas do Excel (obj datetime ou string)."""
     if isinstance(val, datetime):
         return val.date()
     texto = extrair_texto(val)
-    for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%Y-%m-%d %H:%M:%S'):
+    for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%Y-%m-%d %H:%M:%S', '%d-%m-%Y'):
         try:
             return datetime.strptime(texto, fmt).date()
         except ValueError:
             pass
     return None
 
+
+# ==========================================
+# VIEW DE IMPORTAÇÃO
+# ==========================================
+
 @require_POST
 def importar_xlsx(request):
-    # Pega o arquivo do form
-    excel_file = request.FILES.get('arquivo_xlsx')
+    # Captura o arquivo enviado via FormData
+    excel_file = request.FILES.get('arquivo_xlsx') or request.FILES.get('arquivo_excel')
     
     if not excel_file:
         return JsonResponse({'sucesso': False, 'erro': 'Nenhum arquivo enviado.'}, status=400)
@@ -81,22 +91,23 @@ def importar_xlsx(request):
         wb = openpyxl.load_workbook(excel_file, data_only=True)
         sheet = wb.active
         
-        # Mapeamento do cabeçalho (Linha 1)
+        # Leitura e normalização do cabeçalho (Linha 1)
         header = [extrair_texto(cell.value).lower() for cell in sheet[1]]
         
-        # Procura os índices das colunas essenciais
+        # Busca flexível pelos nomes das colunas
         def achar_coluna(nomes):
             for nome in nomes:
                 if nome in header:
                     return header.index(nome)
             return None
 
-        idx_cnpj = achar_coluna(['cnpj', 'cnpj fornecedor', 'cpf/cnpj'])
-        idx_nf = achar_coluna(['nota fiscal', 'nf', 'numero nf'])
-        idx_linha = achar_coluna(['linha digitavel', 'boleto', 'codigo de barras'])
-        idx_valor = achar_coluna(['valor', 'valor (r$)', 'valor total'])
-        idx_venc = achar_coluna(['vencimento', 'data vencimento', 'dt vencimento'])
+        idx_cnpj = achar_coluna(['cnpj', 'cnpj fornecedor', 'cpf/cnpj', 'fornecedor_cnpj'])
+        idx_nf = achar_coluna(['nota fiscal', 'nf', 'numero nf', 'num_nota'])
+        idx_linha = achar_coluna(['linha digitavel', 'boleto', 'codigo de barras', 'linha_digitavel'])
+        idx_valor = achar_coluna(['valor', 'valor (r$)', 'valor total', 'valor_total'])
+        idx_venc = achar_coluna(['vencimento', 'data vencimento', 'dt vencimento', 'data_vencimento'])
 
+        # Validação de colunas obrigatórias
         if None in (idx_cnpj, idx_valor, idx_venc):
             return JsonResponse({
                 'sucesso': False, 
@@ -108,9 +119,11 @@ def importar_xlsx(request):
 
         with transaction.atomic():
             for row_idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+                # Pula linhas inteiramente vazias
                 if not any(row): 
-                    continue # Pula linha vazia
+                    continue
 
+                # 1. CNPJ e Busca Flexível do Fornecedor
                 cnpj_raw = row[idx_cnpj] if idx_cnpj < len(row) else None
                 cnpj_limpo = limpar_cnpj(cnpj_raw)
 
@@ -118,11 +131,21 @@ def importar_xlsx(request):
                     erros.append(f"Linha {row_idx}: CNPJ ausente ou inválido.")
                     continue
 
-                fornecedor = Fornecedor.objects.filter(cnpj=cnpj_limpo).first()
+                # Busca flexível: tenta limpo ('29124964000123'), formatado ('29.124.964/0001-23') ou contendo a numeração
+                cnpj_formatado = formatar_cnpj(cnpj_limpo)
+                fornecedor = Fornecedor.objects.filter(
+                    cnpj__in=[cnpj_limpo, cnpj_formatado]
+                ).first()
+
+                if not fornecedor:
+                    # Segunda tentativa: busca parcial ignorando caracteres invisíveis/espaços
+                    fornecedor = Fornecedor.objects.filter(cnpj__icontains=cnpj_limpo).first()
+
                 if not fornecedor:
                     erros.append(f"Linha {row_idx}: Fornecedor com CNPJ {cnpj_limpo} não encontrado.")
                     continue
 
+                # 2. Processamento do Valor e Data de Vencimento
                 valor = parse_valor(row[idx_valor] if idx_valor < len(row) else 0)
                 vencimento = parse_data(row[idx_venc] if idx_venc < len(row) else None)
 
@@ -130,9 +153,11 @@ def importar_xlsx(request):
                     erros.append(f"Linha {row_idx}: Data de vencimento inválida.")
                     continue
 
+                # 3. Campos Opcionais
                 nf = extrair_texto(row[idx_nf]) if idx_nf is not None and idx_nf < len(row) else ""
                 linha_dig = extrair_texto(row[idx_linha]) if idx_linha is not None and idx_linha < len(row) else ""
 
+                # Instancia o registro
                 contas_novas.append(ContaPagar(
                     fornecedor=fornecedor,
                     numero_nota=nf,
@@ -142,6 +167,7 @@ def importar_xlsx(request):
                     status='PENDENTE'
                 ))
 
+            # Gravação em lote se houver registros válidos
             if contas_novas:
                 ContaPagar.objects.bulk_create(contas_novas)
 
@@ -155,6 +181,7 @@ def importar_xlsx(request):
     except Exception as e:
         return JsonResponse({'sucesso': False, 'erro': f'Erro ao ler arquivo: {str(e)}'}, status=500)
 
+    
 def tela_login(request):
     if request.user.is_authenticated:
         return redirect('homes')
