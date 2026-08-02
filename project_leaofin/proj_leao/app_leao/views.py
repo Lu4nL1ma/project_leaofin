@@ -633,13 +633,13 @@ def form(request):
                 banco=banco_nome,
                 categoria=categoria_nome,
                 parcela=f'0{parcelas}/0{parcelas}',
-                valor=parse_valor_brl(valor_str),
+                valor=parse_valor(valor_str),
                 vencimento=vencimento_base,
                 status="Pendente",
             )
             return redirect("homes")
 
-        valor_parcela = parse_valor_brl(valor_str)
+        valor_parcela = parse_valor(valor_str)
 
         for i in range(1, int(parcelas) + 1):
             vencimento_parcela = vencimento_base + relativedelta(months=i - 1)
@@ -941,7 +941,7 @@ def atualizar_registro(request):
     valor_str = request.POST.get('valor', '').strip()
     if valor_str:
         try:
-            novo_valor = parse_valor_brl(valor_str)
+            novo_valor = parse_valor(valor_str)
         except InvalidOperation:
             messages.error(request, f"Valor inválido: “{valor_str}”.")
             return redirect(destino)
