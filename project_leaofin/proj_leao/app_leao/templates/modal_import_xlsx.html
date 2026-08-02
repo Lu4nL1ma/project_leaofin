@@ -4,6 +4,8 @@
         <!-- PASSO 1: SELEÇÃO DO ARQUIVO -->
         <div id="modalStepUpload">
             <h3>Importar Planilha XLSX</h3>
+
+            <a href="{% url 'baixar_planilha_padrao' %}"> Baixar Planilha Padrão </a>
             
             <form id="formUploadXlsx" action="{% url 'importar_xlsx' %}" method="POST" enctype="multipart/form-data">
                 {% csrf_token %}
