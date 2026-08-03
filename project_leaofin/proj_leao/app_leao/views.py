@@ -100,10 +100,6 @@ def parse_data(val):
 
     return None
 
-# ==========================================
-# VIEW DE IMPORTAÇÃO COM UPSERT
-# ==========================================
-
 @require_POST
 def importar_xlsx(request):
     excel_file = request.FILES.get('arquivo_xlsx') or request.FILES.get('arquivo_excel')
@@ -371,7 +367,7 @@ def home(request):
     if filtro_nota_fiscal and filtro_nota_fiscal.strip():
             queryset = queryset.filter(nota_fiscal__icontains=filtro_nota_fiscal)
     if filtro_linha_digitavel and filtro_linha_digitavel.strip():
-            queryset = queryset.filter(linha_digitavel__icontains=filtro_linha_digitavel)3
+            queryset = queryset.filter(linha_digitavel__icontains=filtro_linha_digitavel)
 
     if filtro_data and filtro_data.strip():
         try:
