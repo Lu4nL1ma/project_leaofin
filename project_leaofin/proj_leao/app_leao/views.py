@@ -128,6 +128,7 @@ def importar_xlsx(request):
         idx_venc = achar_coluna(['vencimento', 'data vencimento', 'dt vencimento', 'data_vencimento', 'venc'])
         idx_categoria = achar_coluna(['categoria', 'cat', 'categoria_nome'])
         idx_banco = achar_coluna(['banco', 'conta bancaria', 'banco_nome', 'bancosaldo'])
+        idx_parcela = achar_coluna(['parcela', 'nº parcela', 'numero parcela', 'parcela_numero'])
 
         # Validação de presença das colunas obrigatórias no cabeçalho
         colunas_faltantes = []
@@ -136,7 +137,7 @@ def importar_xlsx(request):
         if idx_venc is None: colunas_faltantes.append('Vencimento')
         if idx_categoria is None: colunas_faltantes.append('Categoria')
         if idx_banco is None: colunas_faltantes.append('Banco')
-
+        if idx_parcela is None: colunas_faltantes.append('Parcela')
         if colunas_faltantes:
             return JsonResponse({
                 'sucesso': False, 
@@ -203,6 +204,7 @@ def importar_xlsx(request):
                 # --- 4. VALIDAR VALOR E VENCIMENTO ---
                 valor = parse_valor(row[idx_valor] if idx_valor < len(row) else 0)
                 vencimento = parse_data(row[idx_venc] if idx_venc < len(row) else None)
+                parcela = extrair_texto(row[idx_parcela] if idx_parcela < len(row) else "01/01")
 
                 if not vencimento:
                     erros.append(f"Linha {row_idx}: Data de vencimento inválida.")
@@ -211,6 +213,7 @@ def importar_xlsx(request):
                 # --- 5. DADOS OPCIONAIS ---
                 nf = extrair_texto(row[idx_nf]) if idx_nf is not None and idx_nf < len(row) else ""
                 linha_dig = extrair_texto(row[idx_linha]) if idx_linha is not None and idx_linha < len(row) else ""
+                parcela = extrair_texto(row[idx_parcela]) if idx_parcela is not None and idx_parcela < len(row) else "01/01"
 
                 # --- 6. CHECK DE DUPLICIDADE E ATUALIZAÇÃO PARCIAL ---
                 # Ajuste os nomes dos atributos 'vencimento', 'nota_fiscal' ou 'banco' 
@@ -246,7 +249,8 @@ def importar_xlsx(request):
                     linha_digitavel=linha_dig,
                     valor=valor,
                     vencimento=vencimento,
-                    status='Pendente'
+                    status='Pendente',
+                    parcela=parcela
                 ))
 
             if contas_novas:
