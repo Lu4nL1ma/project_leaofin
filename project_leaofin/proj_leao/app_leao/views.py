@@ -45,9 +45,11 @@ def extrair_texto(celula):
         return ""
     return str(celula).strip()
 
+
 def limpar_cnpj(val):
     """Remove caracteres não numéricos do CNPJ."""
     return re.sub(r'\D', '', extrair_texto(val))
+
 
 def formatar_cnpj(c):
     """Insere a pontuação padrão no CNPJ limpo (ex: 00.000.000/0001-00)."""
@@ -55,12 +57,14 @@ def formatar_cnpj(c):
         return f"{c[:2]}.{c[2:5]}.{c[5:8]}/{c[8:12]}-{c[12:]}"
     return c
 
+
 def parse_valor(val):
     """Converte valores em Decimal do Django tratando formatação BRL."""
     if isinstance(val, (int, float)):
         return Decimal(str(val))
     texto = extrair_texto(val).replace('R$', '').replace('.', '').replace(',', '.').strip()
     return Decimal(texto) if texto else Decimal('0.00')
+
 
 def parse_data(val):
     """Trata datas do Excel (datetime, date, serial de dias do Excel ou vários formatos de texto)."""
@@ -95,7 +99,6 @@ def parse_data(val):
             pass
 
     return None
-
 
 # ==========================================
 # VIEW DE IMPORTAÇÃO COM UPSERT
@@ -247,7 +250,7 @@ def importar_xlsx(request):
                     linha_digitavel=linha_dig,
                     valor=valor,
                     vencimento=vencimento,
-                    status='PENDENTE'
+                    status='Pendente'
                 ))
 
             if contas_novas:
@@ -262,6 +265,7 @@ def importar_xlsx(request):
 
     except Exception as e:
         return JsonResponse({'sucesso': False, 'erro': f'Erro ao ler arquivo: {str(e)}'}, status=500)
+
     
 def tela_login(request):
     if request.user.is_authenticated:
@@ -327,6 +331,7 @@ def logout_usuario(request):
 
 
 def home(request):
+
     data_atual = timezone.localdate()
 
     # Atualização automática de contas atrasadas no banco de dados
@@ -344,6 +349,8 @@ def home(request):
     filtro_valor = request.GET.get("valor")
     filtro_observacao = request.GET.get("observacao")
     filtro_status = request.GET.get("status")
+    filtro_nota_fiscal = request.GET.get("nota_fiscal")
+    filtro_linha_digitavel = request.GET.get("linha_digitavel")
 
     if filtro_conciliacao and filtro_conciliacao.strip():
         queryset = queryset.filter(conciliado__icontains=filtro_conciliacao)
@@ -361,6 +368,10 @@ def home(request):
         queryset = queryset.filter(observacao__icontains=filtro_observacao)
     if filtro_status and filtro_status.strip():
         queryset = queryset.filter(status__icontains=filtro_status)
+    if filtro_nota_fiscal and filtro_nota_fiscal.strip():
+            queryset = queryset.filter(nota_fiscal__icontains=filtro_nota_fiscal)
+    if filtro_linha_digitavel and filtro_linha_digitavel.strip():
+            queryset = queryset.filter(linha_digitavel__icontains=filtro_linha_digitavel)3
 
     if filtro_data and filtro_data.strip():
         try:
