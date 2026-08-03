@@ -19,6 +19,7 @@ class ContaPagarAdmin(admin.ModelAdmin):
     list_display = ('fornecedor', 'vencimento', 'categoria', 'banco', 'valor', 'parcela', 'status')
     list_filter = ('status', 'banco', 'categoria', 'vencimento')
     search_fields = ('fornecedor', 'nota_fiscal', 'observacao')
+    list_editable = ('status',)
     ordering = ('-vencimento',)
     date_hierarchy = 'vencimento'
 
