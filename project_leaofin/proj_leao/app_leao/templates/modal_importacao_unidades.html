@@ -1,0 +1,66 @@
+<!-- MODAL DE IMPORTAÇÃO DE PLANILHA -->
+<div class="modal fade" id="modalImportacao" tabindex="-1" aria-labelledby="modalImportacaoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-lg">
+            
+            <!-- Cabeçalho do Modal -->
+            <div class="bg-[#0f2647] text-white p-4 rounded-t-lg flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="file-spreadsheet" class="w-5 h-5 text-amber-400"></i>
+                    <h5 class="font-bold text-sm uppercase tracking-wider mb-0" id="modalImportacaoLabel">
+                        Importar Fechamento de Caixa
+                    </h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white text-xs opacity-75 hover:opacity-100" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+
+            <!-- Form de Envio -->
+            <form action="{% url 'importar_fechamento_caixa' %}" method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <div class="p-6 space-y-4 text-xs text-slate-600">
+                    
+                    <!-- Box Informativo sobre as Colunas -->
+                    <div class="bg-amber-50 border-l-4 border-amber-500 p-3 rounded text-amber-900">
+                        <p class="font-bold mb-1 flex items-center gap-1">
+                            <i data-lucide="alert-circle" class="w-4 h-4"></i> Atenção ao formato da planilha
+                        </p>
+                        <p class="text-[11px] leading-relaxed">
+                            O arquivo deve estar nos formatos <strong>.csv</strong>, <strong>.xlsx</strong> ou <strong>.xls</strong> e conter exatamente os seguintes cabeçalhos:
+                        </p>
+                        <div class="mt-2 font-mono text-[10px] bg-amber-100/70 p-1.5 rounded text-amber-950 font-bold overflow-x-auto">
+                            Data | Unidade | Abertura | Suprimento | Saídas | Troco | Total_Dinheiro | Sangria
+                        </div>
+                    </div>
+
+                    <!-- Input de Arquivo -->
+                    <div>
+                        <label for="arquivo" class="block font-bold text-slate-700 mb-2">
+                            Selecione o arquivo do seu computador:
+                        </label>
+                        <input type="file" 
+                               id="arquivo" 
+                               name="arquivo" 
+                               accept=".csv, .xlsx, .xls" 
+                               required
+                               class="w-full text-slate-500 text-xs file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-[#0f2647] hover:file:bg-slate-200 cursor-pointer border border-slate-200 rounded p-1">
+                    </div>
+
+                </div>
+
+                <!-- Rodapé com Botões -->
+                <div class="bg-slate-50 px-6 py-3 rounded-b-lg flex items-center justify-end gap-2 border-t border-slate-100">
+                    <button type="button" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded transition-colors" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-[#0f2647] hover:bg-slate-800 text-amber-400 font-bold text-xs rounded shadow transition-all flex items-center gap-1.5">
+                        <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+                        Processar e Importar
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>

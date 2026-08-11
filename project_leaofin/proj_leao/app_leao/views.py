@@ -1,3 +1,4 @@
+import pandas as pd
 import io
 import json
 from datetime import date, datetime, timedelta
@@ -29,6 +30,8 @@ from app_leao.models import (
     ContaPagar,
     Fornecedor,
     TransacaoExtrato,
+    FechamentoCaixa,
+    Deposito
 )
 
 try:
@@ -800,7 +803,40 @@ def cadastrar_fornecedor(request):
 
 
 def saldo(request):
-    return render(request, "saldo.html")
+
+    bancos = BancoSaldo.objects.all().order_by('nome')
+
+    dados = FechamentoCaixa.objects.all().values_list(
+    'data',        
+    'unidade', 
+    'abertura', 
+    'suprimento', 
+    'saidas', 
+    'troco', 
+    'vendas', 
+    'total_dinheiro', 
+    'sangria')
+
+    df = pd.DataFrame(
+        list(dados), 
+        columns=['Data', 'Unidade', 'Abertura', 'Suprimento', 'Saídas', 'Troco', 'Vendas', 'Total Dinheiro', 'Sangria']
+    )
+
+    df['Unidade'] = df['Unidade'].str.strip()
+
+    total = df['Sangria'].sum()
+
+    saldo_aero = df[df['Unidade'] == 'AEROPORTO']['Sangria'].sum()
+
+    saldo_casta = df[df['Unidade'] == 'BR 316']['Sangria'].sum()
+
+    saldo_baenoso = df[df['Unidade'] == 'ESTADIO BAENAO']['Sangria'].sum()
+
+    saldo_patio = df[df['Unidade'] == 'PADRE EUTIQUIO']['Sangria'].sum()
+
+    context = {'total':total, 'saldo_aero': saldo_aero, 'saldo_casta': saldo_casta, 'saldo_baenoso': saldo_baenoso, 'saldo_patio': saldo_patio, 'bancos': bancos}
+
+    return render(request, "saldo.html", context)
 
 
 def dashboard_leve(request):
@@ -967,3 +1003,155 @@ def atualizar_registro(request):
         messages.info(request, "Nenhuma alteração foi detectada.")
 
     return redirect(destino)
+
+
+def importar_fechamento_caixa(request):
+
+    print("\n" + "="*50)
+    print("1. INICIANDO IMPORTAÇÃO COM OPENPYXL")
+    print("="*50)
+
+    if request.method == 'POST':
+        if 'arquivo' not in request.FILES:
+            print("❌ ERRO: Nenhum arquivo enviado na requisição.")
+            messages.error(request, 'Nenhum arquivo foi selecionado.')
+            return redirect(request.META.get('HTTP_REFERER', '/'))
+
+        arquivo = request.FILES['arquivo']
+        print(f"2. Arquivo recebido: {arquivo.name}")
+
+        # Valida extensão
+        if not arquivo.name.endswith(('.xlsx', '.xlsm')):
+            print("❌ ERRO: Formato inválido. openpyxl lê apenas .xlsx / .xlsm")
+            messages.error(request, 'Envie um arquivo do Excel (.xlsx). Para CSV, salve em .xlsx.')
+            return redirect(request.META.get('HTTP_REFERER', '/'))
+
+        try:
+            # Carrega a planilha na memória
+            wb = openpyxl.load_workbook(arquivo, data_only=True)
+            sheet = wb.active
+            print(f"3. Planilha aberta com sucesso! Aba ativa: {sheet.title}")
+
+            # Pega o cabeçalho (primeira linha) e normaliza
+            primeira_linha = [str(cell.value or '').strip().lower() for cell in sheet[1]]
+            print("Cabeçalhos encontrados:", primeira_linha)
+
+            # Mapeia qual coluna é qual pelo nome do cabeçalho
+            def get_col_index(nome_coluna):
+                try:
+                    return primeira_linha.index(nome_coluna)
+                except ValueError:
+                    return None
+
+            col_data = get_col_index('data')
+            col_unidade = get_col_index('unidade')
+            col_abertura = get_col_index('abertura')
+            col_suprimento = get_col_index('suprimento')
+            col_saidas = get_col_index('saidas') or get_col_index('saídas')
+            col_troco = get_col_index('troco')
+            col_vendas = get_col_index('vendas')
+            col_total_dinheiro = get_col_index('total dinheiro')
+            col_sangria = get_col_index('sangria')
+
+            if col_data is None:
+                print("❌ ERRO: Coluna 'data' não foi encontrada na planilha!")
+                messages.error(request, "Cabeçalho 'Data' não encontrado na planilha.")
+                return redirect(request.META.get('HTTP_REFERER', '/'))
+
+            registros = []
+
+            # Percorre as linhas a partir da segunda (pula o cabeçalho)
+            for row in sheet.iter_rows(min_row=2, values_only=True):
+                # Pula linha totalmente vazia
+                if not any(row):
+                    continue
+
+                # Trata a Data
+                val_data = row[col_data] if col_data is not None else None
+                data_formatada = None
+
+                if isinstance(val_data, datetime):
+                    data_formatada = val_data.date()
+                elif isinstance(val_data, str) and val_data.strip():
+                    try:
+                        # Tenta converter texto em data (formato DD/MM/AAAA)
+                        data_formatada = datetime.strptime(val_data.strip(), "%d/%m/%Y").date()
+                    except ValueError:
+                        try:
+                            # Tenta converter texto em data (formato AAAA-MM-DD)
+                            data_formatada = datetime.strptime(val_data.strip(), "%Y-%m-%d").date()
+                        except ValueError:
+                            pass
+
+                if not data_formatada:
+                    print(f"⚠️ Pulei linha por data inválida: {val_data}")
+                    continue
+
+                # Função auxiliar para limpar floats/decimals de forma segura
+                def clean_decimal(val):
+                    if val is None:
+                        return 0.0
+                    try:
+                        return float(val)
+                    except (ValueError, TypeError):
+                        return 0.0
+
+                registros.append(
+                    FechamentoCaixa(
+                        data=data_formatada,
+                        unidade=str(row[col_unidade]) if col_unidade is not None and row[col_unidade] else '',
+                        abertura=clean_decimal(row[col_abertura] if col_abertura is not None else 0),
+                        suprimento=clean_decimal(row[col_suprimento] if col_suprimento is not None else 0),
+                        saidas=clean_decimal(row[col_saidas] if col_saidas is not None else 0),
+                        troco=clean_decimal(row[col_troco] if col_troco is not None else 0),
+                        vendas=clean_decimal(row[col_vendas] if col_vendas is not None else 0),
+                        total_dinheiro=clean_decimal(row[col_total_dinheiro] if col_total_dinheiro is not None else 0),
+                        sangria=clean_decimal(row[col_sangria] if col_sangria is not None else 0),
+                    )
+                )
+
+            print(f"4. Total de linhas válidas processadas: {len(registros)}")
+
+            if registros:
+                FechamentoCaixa.objects.bulk_create(registros)
+                print("5. 🚀 SUCESSO! Dados salvos no banco!")
+                messages.success(request, f'{len(registros)} registros importados com sucesso!')
+            else:
+                print("⚠️ AVISO: Nenhuma linha com data válida foi convertida.")
+                messages.warning(request, 'Nenhum dado válido encontrado na planilha.')
+
+        except Exception as e:
+            print(f"❌ ERRO EXCEÇÃO: {str(e)}")
+            messages.error(request, f'Erro ao ler o arquivo Excel: {str(e)}')
+
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+
+    return redirect('/')
+
+
+def deposito(request):
+    if request.method == 'POST':
+        # Captura os dados enviados pelo formulário manual
+        unidade = request.POST.get('unidade')
+        data_deposito = request.POST.get('data_deposito')
+        valor = request.POST.get('valor')
+        destino = request.POST.get('destino')
+        comprovante = request.FILES.get('comprovante')
+        observacao = request.POST.get('observacao')
+
+        # Validação simples de campos obrigatórios
+        if unidade and data_deposito and valor:
+            Deposito.objects.create(
+                unidade=unidade,
+                data_deposito=data_deposito,
+                valor=valor,
+                destino=destino,
+                comprovante=comprovante,
+                observacao=observacao
+            )
+            messages.success(request, 'Depósito registrado com sucesso!')
+        else:
+            messages.error(request, 'Erro ao registrar: preencha todos os campos obrigatórios.')
+
+    # Redireciona de volta para a página anterior/saldo
+    return redirect(request.META.get('HTTP_REFERER', '/'))

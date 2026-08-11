@@ -1,13 +1,22 @@
+{% load static %}
+{% load mascaras_financeiras %}
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LeãoFin | Painel Corporativo</title>
+    
+    <!-- 1. CSS do Bootstrap (Necessário para a estrutura visual do Modal) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
     <!-- Tailwind CSS para o layout estruturado de portal -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    
     <!-- Lucide Icons para os ícones do sistema -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    
     <style>
         body { font-family: 'Segoe UI', Roboto, Arial, sans-serif; }
     </style>
@@ -24,24 +33,16 @@
                     <i data-lucide="building-2" class="w-4 h-4"></i>
                     <span>LEÃO FIN</span>
                 </div>
-                <span class="text-xs font-semibold tracking-wider text-slate-400 hidden sm:inline">| CONSOLIDAÇÃO DE FILIAIS</span>
+                <span class="text-xs font-semibold tracking-wider text-slate-400 hidden sm:inline"></span>
             </div>
 
             <!-- Painel do Usuário / Empresa -->
             <div class="flex items-center gap-6 text-xs">
                 <div class="text-right hidden md:block">
-                    <p class="font-bold text-amber-400 uppercase">Master Admin</p>
-                    <p class="text-slate-300 font-medium">REDE DE LOJAS LEÃO LTDA</p>
+                    <p class="text-slate-300 font-medium">UNIDADES LOJAS LEÃO AZUL LTDA</p>
                 </div>
                 <div class="h-8 w-[1px] bg-slate-700 hidden md:block"></div>
-                <div class="flex items-center gap-3">
-                    <div class="bg-slate-700 w-8 h-8 rounded flex items-center justify-center font-bold">
-                        ADM
-                    </div>
-                    <a href="#" class="text-slate-300 hover:text-red-400 font-medium flex items-center gap-1 transition-colors">
-                        Sair <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
-                    </a>
-                </div>
+                <div class="flex items-center gap-3"></div>
             </div>
 
         </div>
@@ -53,12 +54,14 @@
             <a href="#" class="text-[#0f2647] border-b-2 border-amber-500 h-12 flex items-center px-1 gap-2">
                 <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Painel Geral
             </a>
-            <a href="#" class="hover:text-[#0f2647] h-12 flex items-center px-1 gap-2 border-b-2 border-transparent hover:border-slate-300">
-                <i data-lucide="plus-circle" class="w-4 h-4"></i> Informar Depósito
-            </a>
             <a href="{% url 'saldo' %}" class="hover:text-[#0f2647] h-12 flex items-center px-1 gap-2 border-b-2 border-transparent hover:border-slate-300">
-                <i data-lucide="wallet" class="w-4 h-4"></i> Detalhar Saldos
+                <i data-lucide="wallet" class="w-4 h-4"></i> Detalhar Movimento
             </a>
+
+            <a href="{% url 'saldo' %}" class="hover:text-[#0f2647] h-12 flex items-center px-1 gap-2 border-b-2 border-transparent hover:border-slate-300">
+                <i data-lucide="wallet" class="w-4 h-4"></i> Detalhar Depósitos
+            </a>
+
             <a href="#" class="hover:text-[#0f2647] h-12 flex items-center px-1 gap-2 border-b-2 border-transparent hover:border-slate-300">
                 <i data-lucide="file-text" class="w-4 h-4"></i> Exportar Relatórios
             </a>
@@ -68,13 +71,42 @@
     <!-- CONTAINER PRINCIPAL (LARGURA TOTAL DA TELA) -->
     <main class="max-w-full mx-auto px-8 pt-36 pb-12">
 
+                <!-- ALERTAS DE MENSAGENS DO DJANGO (ERRO / SUCESSO / AVISO) -->
+        {% if messages %}
+            <div class="space-y-2 mb-4">
+                {% for message in messages %}
+                    <div class="flex items-center justify-between p-3 text-xs font-bold rounded-lg shadow-sm border transition-all 
+                        {% if message.tags == 'error' %} bg-red-50 text-red-800 border-red-200
+                        {% elif message.tags == 'warning' %} bg-amber-50 text-amber-800 border-amber-200
+                        {% else %} bg-emerald-50 text-emerald-800 border-emerald-200 {% endif %}">
+                        
+                        <div class="flex items-center gap-2">
+                            {% if message.tags == 'error' %}
+                                <i data-lucide="alert-triangle" class="w-4 h-4 text-red-600"></i>
+                            {% elif message.tags == 'warning' %}
+                                <i data-lucide="alert-circle" class="w-4 h-4 text-amber-600"></i>
+                            {% else %}
+                                <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+                            {% endif %}
+                            <span>{{ message }}</span>
+                        </div>
+                        
+                        <!-- Botão para fechar o alerta -->
+                        <button type="button" class="text-slate-400 hover:text-slate-600" onclick="this.parentElement.remove()">
+                            &times;
+                        </button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
         <!-- GRID PRINCIPAL DE TRÊS COLUNAS -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             <!-- COLUNA ESQUERDA E CENTRAL (RESUMO GLOBAL E AS LOJAS) -->
             <div class="lg:col-span-2 space-y-6">
                 
-                <!-- CARD DE SALDO CONSOLIDADO (ESTILO EXTRATO MESTRE) -->
+                <!-- CARD DE SALDO CONSOLIDADO -->
                 <div class="bg-[#1e3a63] text-white rounded shadow-xs border-t-4 border-amber-500 p-6">
                     <div class="flex justify-between items-start mb-4">
                         <div>
@@ -88,8 +120,7 @@
                     
                     <div class="my-4">
                         <p class="text-slate-400 text-xs">Somatório Disponível em Caixa</p>
-                        <!-- Local da sua variável do Django -->
-                        <h2 class="text-4xl font-mono font-bold tracking-tight text-white">R$ 84.920,50</h2>
+                        <h2 class="text-4xl font-mono font-bold tracking-tight text-white">{{ total|moeda_br }}</h2>
                     </div>
 
                     <div class="pt-4 border-t border-slate-700/60 flex justify-between text-xs text-slate-300">
@@ -116,13 +147,12 @@
                                     F1
                                 </div>
                                 <div>
-                                    <h4 class="font-bold text-slate-900 text-sm">Loja 01 - Centro</h4>
+                                    <h4 class="font-bold text-slate-900 text-sm">Loja 02 - Aeroporto</h4>
                                     <p class="text-xs text-slate-400">Última movimentação registrada hoje às 10:15</p>
                                 </div>
                             </div>
                             <div class="text-left sm:text-right">
-                                <p class="font-mono font-bold text-slate-900 text-lg">R$ 28.450,00</p>
-                                <span class="text-[10px] uppercase font-bold tracking-wider bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded">Concluído</span>
+                                <p class="font-mono font-bold text-slate-900 text-lg"> {{ saldo_aero|moeda_br }} </p>
                             </div>
                         </div>
 
@@ -133,13 +163,12 @@
                                     F2
                                 </div>
                                 <div>
-                                    <h4 class="font-bold text-slate-900 text-sm">Loja 02 - Shopping</h4>
+                                    <h4 class="font-bold text-slate-900 text-sm">Loja 03 - Castanheira</h4>
                                     <p class="text-xs text-slate-400">Última movimentação registrada ontem às 21:40</p>
                                 </div>
                             </div>
                             <div class="text-left sm:text-right">
-                                <p class="font-mono font-bold text-slate-900 text-lg">R$ 34.120,50</p>
-                                <span class="text-[10px] uppercase font-bold tracking-wider bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded">Concluído</span>
+                                <p class="font-mono font-bold text-slate-900 text-lg">{{ saldo_casta|moeda_br }}</p>
                             </div>
                         </div>
 
@@ -150,13 +179,12 @@
                                     F3
                                 </div>
                                 <div>
-                                    <h4 class="font-bold text-slate-900 text-sm">Loja 03 - Zona Sul</h4>
+                                    <h4 class="font-bold text-slate-900 text-sm">Loja 04 - Baenão</h4>
                                     <p class="text-xs text-slate-400">Aguardando envio do relatório de fechamento diário</p>
                                 </div>
                             </div>
                             <div class="text-left sm:text-right">
-                                <p class="font-mono font-bold text-slate-900 text-lg">R$ 12.850,00</p>
-                                <span class="text-[10px] uppercase font-bold tracking-wider bg-amber-50 text-amber-700 px-2 py-0.5 rounded">Pendente</span>
+                                <p class="font-mono font-bold text-slate-900 text-lg">{{ saldo_baenoso|moeda_br }}</p>
                             </div>
                         </div>
 
@@ -167,13 +195,12 @@
                                     F4
                                 </div>
                                 <div>
-                                    <h4 class="font-bold text-slate-900 text-sm">Loja 04 - Norte</h4>
+                                    <h4 class="font-bold text-slate-900 text-sm">Loja 05 - Pátio Belém</h4>
                                     <p class="text-xs text-slate-400">Última movimentação registrada hoje às 08:30</p>
                                 </div>
                             </div>
                             <div class="text-left sm:text-right">
-                                <p class="font-mono font-bold text-slate-900 text-lg">R$ 9.500,00</p>
-                                <span class="text-[10px] uppercase font-bold tracking-wider bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded">Concluído</span>
+                                <p class="font-mono font-bold text-slate-900 text-lg">{{ saldo_patio|moeda_br }}</p>
                             </div>
                         </div>
                     </div>
@@ -190,15 +217,23 @@
                         <i data-lucide="shield" class="w-4 h-4 text-slate-400"></i> Funções Administrativas
                     </h3>
                     <div class="space-y-2">
-                        <button class="w-full text-left bg-slate-50 hover:bg-[#0f2647] hover:text-white border border-slate-200 p-3 rounded text-xs font-bold transition-all flex items-center justify-between group cursor-pointer">
-                            <span class="flex items-center gap-2"><i data-lucide="plus-circle" class="w-4 h-4 text-emerald-600 group-hover:text-amber-400"></i> INFORMAR NOVO DEPÓSITO</span>
+                        <button type="button" onclick="openModal()" class="w-full text-left bg-slate-50 hover:bg-[#0f2647] hover:text-white border border-slate-200 p-3 rounded text-xs font-bold transition-all flex items-center justify-between group cursor-pointer">
+                                <span class="flex items-center gap-2">
+                                    <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-600 group-hover:text-amber-400"></i> INFORMAR NOVO DEPÓSITO
+                                </span>
+                                <i data-lucide="chevron-right" class="w-3.5 h-3.5 opacity-60"></i>
+                            </button>
+                                                <!-- Botão de Importação -->
+                        <button type="button" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#modalImportacao" 
+                                class="w-full text-left bg-slate-50 hover:bg-[#0f2647] hover:text-white border border-slate-200 p-3 rounded text-xs font-bold transition-all flex items-center justify-between group cursor-pointer">
+                            <span class="flex items-center gap-2">
+                                <i data-lucide="file-spreadsheet" class="w-4 h-4 text-blue-600 group-hover:text-amber-400"></i> IMPORTAR PLANILHA
+                            </span>
                             <i data-lucide="chevron-right" class="w-3.5 h-3.5 opacity-60"></i>
                         </button>
-                        
-                        <a href="{% url 'saldo' %}" class="w-full text-left bg-slate-50 hover:bg-[#0f2647] hover:text-white border border-slate-200 p-3 rounded text-xs font-bold transition-all flex items-center justify-between group block">
-                            <span class="flex items-center gap-2"><i data-lucide="search" class="w-4 h-4 text-blue-600 group-hover:text-amber-400"></i> CONFERIR MOVIMENTAÇÕES</span>
-                            <i data-lucide="chevron-right" class="w-3.5 h-3.5 opacity-60"></i>
-                        </a>
+
                     </div>
                 </div>
 
@@ -208,7 +243,6 @@
                         Últimos Depósitos Registrados
                     </h3>
                     <div class="space-y-3 font-mono text-xs">
-                        <!-- Item 1 -->
                         <div class="p-2.5 bg-slate-50 border-l-2 border-emerald-500 rounded-r">
                             <div class="flex justify-between font-bold text-slate-900">
                                 <span>Filial Centro</span>
@@ -217,7 +251,6 @@
                             <p class="text-[10px] text-slate-400 mt-1">Responsável: Marcos (Gerente) • 10:15</p>
                         </div>
 
-                        <!-- Item 2 -->
                         <div class="p-2.5 bg-slate-50 border-l-2 border-emerald-500 rounded-r">
                             <div class="flex justify-between font-bold text-slate-900">
                                 <span>Filial Norte</span>
@@ -234,9 +267,39 @@
 
     </main>
 
-    <!-- Inicialização dos Ícones -->
+    {% include "modal_deposito.html" %}
+
+    {% include 'modal_importacao_unidades.html' %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
         lucide.createIcons();
+
+          function openModal() {
+        document.getElementById('depositModal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+        document.getElementById('depositModal').classList.add('hidden');
+    }
+
+    function openModalWithUnit(unidadeNome) {
+        openModal();
+        const selectUnidade = document.getElementById('id_unidade');
+        if (selectUnidade) {
+            selectUnidade.value = unidadeNome;
+        }
+    }
+
+    // Fecha o modal ao clicar fora dele
+    window.onclick = function(event) {
+        const modal = document.getElementById('depositModal');
+        if (event.target === modal) {
+            closeModal();
+        }
+    };
+
     </script>
 </body>
 </html>

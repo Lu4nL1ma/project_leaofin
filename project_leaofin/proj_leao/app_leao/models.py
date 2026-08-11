@@ -1,9 +1,19 @@
 from django.db import models
 from django.core.validators import RegexValidator
 
-# ==============================================================================
-# 📦 2. O PLANEJAMENTO: CONTAS A PAGAR
-# ==============================================================================
+
+class BancoSaldo(models.Model):
+    nome = models.CharField(max_length=100, verbose_name="Nome do Banco", unique=True)
+    saldo = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Saldo (R$)")
+
+    class Meta:
+        verbose_name = "Banco / Saldo"
+        verbose_name_plural = "Bancos / Saldos"
+
+    def __str__(self):
+        return f"{self.nome} - R$ {self.saldo}"
+
+
 class ContaPagar(models.Model):
     STATUS_CHOICES = [
         ('Pendente', 'Pendente'),
@@ -38,9 +48,7 @@ class ContaPagar(models.Model):
     def __str__(self):
         return f"{self.fornecedor} - Venc: {self.vencimento} - R$ {self.valor}"
 
-# ==============================================================================
-# 🏦 3. A REALIDADE: TRANSAÇÕES DO EXTRATO BANCÁRIO (OFX)
-# ==============================================================================
+
 class TransacaoExtrato(models.Model):
     banco_origem = models.CharField(max_length=100, verbose_name="Banco do Extrato", db_index=True)
     data_banco = models.DateField(verbose_name="Data no Extrato", db_index=True)
@@ -57,9 +65,7 @@ class TransacaoExtrato(models.Model):
     def __str__(self):
         return f"[{self.banco_origem}] {self.data_banco} - R$ {self.valor_extrato}"
 
-# ==============================================================================
-# 🔗 4. O VÍNCULO: CONCILIAÇÃO BANCÁRIA (MECANISMO DE AUDITORIA)
-# ==============================================================================
+
 class ConciliacaoBancaria(models.Model):
     # Removido FK -> Guarda apenas o ID numérico da Conta a Pagar
     conta_pagar_id = models.IntegerField(
@@ -184,3 +190,120 @@ class Categoria(models.Model):
 
     def __str__(self):
         return self.nome
+
+
+class FechamentoCaixa(models.Model):
+
+    data = models.DateField(
+        verbose_name="Data"
+    )
+    unidade = models.CharField(
+        max_length=100, 
+        verbose_name="Unidade"
+    )
+    abertura = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0.00, 
+        verbose_name="Abertura"
+    )
+    suprimento = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0.00, 
+        verbose_name="Suprimento"
+    )
+    saidas = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0.00, 
+        verbose_name="Saídas"
+    )
+    troco = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0.00, 
+        verbose_name="Troco"
+    )
+
+    vendas = models.DecimalField(
+            max_digits=10, 
+            decimal_places=2, 
+            default=0.00, 
+            verbose_name="Troco"
+        )
+    
+    total_dinheiro = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0.00, 
+        verbose_name="Total em Dinheiro"
+    )
+    sangria = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0.00, 
+        verbose_name="Sangria"
+    )
+
+    class Meta:
+        verbose_name = "Fechamento de Caixa"
+        verbose_name_plural = "Fechamentos de Caixa"
+        ordering = ['-data']
+
+    def __str__(self):
+        return f"{self.unidade} - {self.data.strftime('%d/%m/%Y')}"
+
+
+class Deposito(models.Model):
+    TIPO_CONTA_CHOICES = [
+        ('Bradesco (E-Commerce)', '58.390.674/0001-20'),
+        ('Bradesco (Aeroporto)', '58.390.674/0002-00'),
+        ('Bradesco (Baenão)', '58.390.674/0004-72'),
+        ('Bradesco (Castanheira)', '58.390.674/0003-91'),
+        ('Bradesco (Pátio Belém)', '58.390.674/0005-53'),
+    ]
+
+    unidade = models.CharField(
+        max_length=100,
+        verbose_name="Unidade/Filial"
+    )
+    data_deposito = models.DateField(
+        verbose_name="Data do Depósito"
+    )
+    valor = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Valor Depositado"
+    )
+    destino = models.CharField(
+        max_length=100,
+        choices=TIPO_CONTA_CHOICES,
+        default='BANCO',
+        verbose_name="Destino do Depósito"
+    )
+    comprovante = models.FileField(
+        upload_to='comprovantes_depositos/%Y/%m/',
+        blank=True,
+        null=True,
+        verbose_name="Comprovante"
+    )
+    observacao = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Observações"
+    )
+    
+    # Controle de Auditoria / Sistema
+    criado_em = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Registrado em"
+    )
+
+    class Meta:
+        verbose_name = "Depósito"
+        verbose_name_plural = "Depósitos"
+        ordering = ['-data_deposito', '-criado_em']
+
+    def __str__(self):
+        return f"{self.unidade} - R$ {self.valor} ({self.data_deposito.strftime('%d/%m/%Y')})"

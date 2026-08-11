@@ -1,5 +1,5 @@
 from django.contrib import admin
-from app_leao.models import ContaPagar, TransacaoExtrato, ConciliacaoBancaria, Categoria, Fornecedor, BancoSaldo
+from app_leao.models import ContaPagar, TransacaoExtrato, ConciliacaoBancaria, Categoria, Fornecedor, BancoSaldo, FechamentoCaixa, Deposito
 
 # ==============================================================================
 # 🏷️ CATEGORIA ADMIN
@@ -108,3 +108,69 @@ class BancoSaldoAdmin(admin.ModelAdmin):
     list_display = ('nome', 'cnpj_unidade')
     search_fields = ('nome',)
     ordering = ('nome',)
+
+
+@admin.register(FechamentoCaixa)
+class FechamentoCaixaAdmin(admin.ModelAdmin):
+    # Colunas que serão exibidas na tabela do Admin
+    list_display = (
+        'data_formatada',
+        'unidade',
+        'get_abertura',
+        'get_suprimento',
+        'get_saidas',
+        'get_troco',
+        'get_total_dinheiro',
+        'get_sangria',
+    )
+
+    # Filtros laterais
+    list_filter = ('unidade', 'data')
+
+    # Campos para barra de pesquisa
+    search_fields = ('unidade', 'data')
+
+    # Hierarquia de navegação por data
+    date_hierarchy = 'data'
+
+    # Ordenação padrão (mais recentes primeiro)
+    ordering = ('-data', 'unidade')
+
+    # Quantidade de itens por página
+    list_per_page = 25
+
+    # Métodos customizados para formatar valores monetários como R$ X.XXX,XX
+    @admin.display(description='Data', ordering='data')
+    def data_formatada(self, obj):
+        return obj.data.strftime('%d/%m/%Y') if obj.data else '-'
+
+    @admin.display(description='Abertura', ordering='abertura')
+    def get_abertura(self, obj):
+        return f"R$ {obj.abertura:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+
+    @admin.display(description='Suprimento', ordering='suprimento')
+    def get_suprimento(self, obj):
+        return f"R$ {obj.suprimento:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+
+    @admin.display(description='Saídas', ordering='saidas')
+    def get_saidas(self, obj):
+        return f"R$ {obj.saidas:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+
+    @admin.display(description='Troco', ordering='troco')
+    def get_troco(self, obj):
+        return f"R$ {obj.troco:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+
+    @admin.display(description='Total Dinheiro', ordering='total_dinheiro')
+    def get_total_dinheiro(self, obj):
+        return f"R$ {obj.total_dinheiro:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+
+    @admin.display(description='Sangria', ordering='sangria')
+    def get_sangria(self, obj):
+        return f"R$ {obj.sangria:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+
+
+@admin.register(Deposito)
+class DepositoAdmin(admin.ModelAdmin):
+    list_display = ('unidade', 'data_deposito', 'valor', 'destino', 'criado_em')
+    list_filter = ('unidade', 'destino', 'data_deposito')
+    search_fields = ('unidade', 'observacao')
