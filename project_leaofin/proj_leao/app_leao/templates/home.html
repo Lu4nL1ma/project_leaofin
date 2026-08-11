@@ -150,20 +150,20 @@
         }
 
         .btn-excel {
-                display: inline-block;
-                padding: 8px 16px;
-                background: #10b981;
-                color: #fff;
-                font-weight: 600;
-                font-size: 14px;
-                text-decoration: none;
-                border-radius: 6px;
-                transition: 0.2s;
-                }
+            display: inline-block;
+            padding: 8px 16px;
+            background: #10b981;
+            color: #fff;
+            font-weight: 600;
+            font-size: 14px;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: 0.2s;
+        }
 
-                .btn-excel:hover {
-                background: #059669;
-                }
+        .btn-excel:hover {
+            background: #059669;
+        }
     </style>
 </head>
 <body>
@@ -217,6 +217,7 @@
                     <a href="{% url 'saldo' %}">Saldo Físico</a>
                     <a href="{% url 'aba_conciliacao' %}" style="border-top: 1px solid #e2e8f0; color: #16a34a;">Aba Conciliação</a>
                     <a href="{% url 'dashboard_financeiro' %}" style="border-top: 1px solid #e2e8f0; color: #b40101;">Análise de Desempenho</a>
+                    <a href="javascript:void(0);" onclick="abrirModalExportar()" style="border-top: 1px solid #e2e8f0; color: #b40101;">Exportar Dados</a>
                 </div>
             </div>
         </div>
@@ -308,7 +309,6 @@
                             <th style="background-color: #f8fafc;"></th>
                         </tr>
                     </thead>
-        </form>
 
                     <tbody>
                         {% for item in page_obj %}
@@ -410,6 +410,7 @@
                     </tbody>
                 </table>
             </div>
+        </form> <!-- Fechamento correto do form de filtros -->
 
         <!-- ============================================================
              PAGINAÇÃO
@@ -442,14 +443,18 @@
 
     </div>
 
+    <!-- MODAIS E SCRIPTS -->
     {% include 'modal_pagamento.html' %}
     <script src="{% static 'js/modal.js' %}"></script>
 
     {% include 'modal_import_xlsx.html' %}
-    <script src="{% static 'js/import_xlsx.js' %}"> </script>
+    <script src="{% static 'js/import_xlsx.js' %}"></script>
 
     {% include 'modal_editar_registro.html' %}
     <script src="{% static 'js/editar_registro.js' %}"></script>
+
+    {% include 'modal_export.html' %}
+    <script src="{% static 'js/modal_export.js' %}"></script>
 
     <!-- SCRIPT DE COPIAR A LINHA DIGITÁVEL -->
     <script>

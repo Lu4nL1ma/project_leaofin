@@ -1,7 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-# Garanta que está 'atualizar_status_json' e NÃO 'actualizar_status_json'
-from app_leao.views import home, form, conciliar, aba_conciliacao, atualizar_status_json, provisao_periodo, cadastrar_fornecedor, saldo, tela_login, login_usuario, logout_usuario, dashboard_leve, processar_ofx_ajax, salvar_conciliacao_lote, importar_xlsx, baixar_planilha_padrao, atualizar_registro, importar_fechamento_caixa, deposito
+from app_leao.views import *
 
 urlpatterns = [
     path('login/', tela_login, name='tela_login'),
@@ -19,6 +18,7 @@ urlpatterns = [
     path('atualizar-registro/', atualizar_registro, name='atualizar_registro'),
     path('importar-caixa/', importar_fechamento_caixa, name='importar_fechamento_caixa'),
     path('deposito/', deposito, name='deposito'),
+    path('contas-pagar/exportar-excel/', exportar_contas_pagar_excel, name='exportar_contas_pagar_excel'),
     
     # 🔥 ADICIONE ESTA LINHA AQUI:
     path('gravar-conciliacao-lote/', salvar_conciliacao_lote, name='gravar_conciliacao_lote'),

@@ -6,7 +6,10 @@ from dateutil.relativedelta import relativedelta
 from decimal import Decimal, InvalidOperation
 import openpyxl
 import re
+from datetime import datetime
 from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.core.paginator import Paginator
@@ -1155,3 +1158,145 @@ def deposito(request):
 
     # Redireciona de volta para a página anterior/saldo
     return redirect(request.META.get('HTTP_REFERER', '/'))
+
+
+def exportar_contas_pagar_excel(request):
+    tipo_exportacao = request.GET.get('tipo', 'tudo')
+    data_inicio = request.GET.get('data_inicio')
+    data_fim = request.GET.get('data_fim')
+
+    # 1. Ajustado de data_vencimento para vencimento
+    queryset = ContaPagar.objects.all().order_by('vencimento')
+
+    periodo_texto = "Base Completa"
+    if tipo_exportacao == 'periodo' and data_inicio and data_fim:
+        # 2. Ajustado o filtro também para vencimento
+        queryset = queryset.filter(vencimento__range=[data_inicio, data_fim])
+        dt_ini_str = datetime.datetime.strptime(data_inicio, '%Y-%m-%d').strftime('%d/%m/%Y')
+        dt_fim_str = datetime.datetime.strptime(data_fim, '%Y-%m-%d').strftime('%d/%m/%Y')
+        periodo_texto = f"Período: {dt_ini_str} a {dt_fim_str}"
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Contas a Pagar"
+    ws.views.sheetView[0].showGridLines = True
+
+    # Estilos Visuais
+    font_titulo = Font(name='Segoe UI', size=16, bold=True, color='1F497D')
+    font_subtitulo = Font(name='Segoe UI', size=11, italic=True, color='595959')
+    font_header = Font(name='Segoe UI', size=11, bold=True, color='FFFFFF')
+    fill_header = PatternFill(start_color='1F497D', end_color='1F497D', fill_type='solid')
+    
+    font_dados = Font(name='Segoe UI', size=10)
+    fill_zebra = PatternFill(start_color='F2F5F8', end_color='F2F5F8', fill_type='solid')
+    fill_white = PatternFill(start_color='FFFFFF', end_color='FFFFFF', fill_type='solid')
+
+    font_total = Font(name='Segoe UI', size=11, bold=True, color='1F497D')
+    fill_total = PatternFill(start_color='DCE6F1', end_color='DCE6F1', fill_type='solid')
+
+    border_thin = Border(
+        left=Side(style='thin', color='D9D9D9'),
+        right=Side(style='thin', color='D9D9D9'),
+        top=Side(style='thin', color='D9D9D9'),
+        bottom=Side(style='thin', color='D9D9D9')
+    )
+    border_total = Border(
+        top=Side(style='thin', color='1F497D'),
+        bottom=Side(style='double', color='1F497D')
+    )
+
+    align_center = Alignment(horizontal='center', vertical='center')
+    align_left = Alignment(horizontal='left', vertical='center')
+    align_right = Alignment(horizontal='right', vertical='center')
+
+    # Cabeçalho
+    ws.merge_cells('A1:E1')
+    ws['A1'] = "Relatório de Contas a Pagar"
+    ws['A1'].font = font_titulo
+    ws['A1'].alignment = align_left
+
+    ws.merge_cells('A2:E2')
+    ws['A2'] = f"Escopo: {periodo_texto} | Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+    ws['A2'].font = font_subtitulo
+    ws['A2'].alignment = align_left
+
+    headers = ['ID', 'Fornecedor', 'Data Vencimento', 'Valor (R$)', 'Status']
+    ws.append([])
+    ws.append(headers)
+
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=4, column=col_num)
+        cell.font = font_header
+        cell.fill = fill_header
+        cell.alignment = align_center
+        cell.border = border_thin
+
+    start_row = 5
+    for idx, conta in enumerate(queryset, start=start_row):
+        is_even = (idx - start_row) % 2 == 0
+        current_fill = fill_white if is_even else fill_zebra
+
+        ws.cell(row=idx, column=1, value=conta.id)
+        ws.cell(row=idx, column=2, value=str(getattr(conta, 'fornecedor', '-')))
+        
+        # 3. Leitura do atributo correto: conta.vencimento
+        data_venc = getattr(conta, 'vencimento', None)
+        ws.cell(row=idx, column=3, value=data_venc.strftime('%d/%m/%Y') if data_venc else '-')
+        
+        valor = float(getattr(conta, 'valor', 0) or 0)
+        ws.cell(row=idx, column=4, value=valor)
+        
+        ws.cell(row=idx, column=5, value=str(getattr(conta, 'status', 'Pendente')).upper())
+
+        for col_num in range(1, 6):
+            c = ws.cell(row=idx, column=col_num)
+            c.font = font_dados
+            c.fill = current_fill
+            c.border = border_thin
+            
+            if col_num in (1, 3, 5):
+                c.alignment = align_center
+            elif col_num == 2:
+                c.alignment = align_left
+            elif col_num == 4:
+                c.alignment = align_right
+                c.number_format = 'R$ #,##0.00'
+
+    last_row = start_row + len(queryset) - 1 if len(queryset) > 0 else start_row
+
+    # Linha de Totais
+    total_row = last_row + 1
+    ws.cell(row=total_row, column=1, value="TOTAL")
+    ws.merge_cells(start_row=total_row, start_column=1, end_row=total_row, end_column=3)
+    ws.cell(row=total_row, column=1).alignment = Alignment(horizontal='right', vertical='center')
+    
+    sum_cell = ws.cell(
+        row=total_row, 
+        column=4, 
+        value=f"=SUM(D{start_row}:D{last_row})" if len(queryset) > 0 else 0
+    )
+    sum_cell.number_format = 'R$ #,##0.00'
+    sum_cell.alignment = align_right
+
+    for col_num in range(1, 6):
+        c = ws.cell(row=total_row, column=col_num)
+        c.font = font_total
+        c.fill = fill_total
+        c.border = border_total
+
+    # Ajuste das colunas
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or '')) for cell in col)
+        col_letter = get_column_letter(col[0].column)
+        ws.column_dimensions[col_letter].width = max(max_len + 5, 14)
+
+    ws.freeze_panes = 'A5'
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    filename = f"contas_a_pagar_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    wb.save(response)
+    return response

@@ -1,0 +1,48 @@
+<!-- modal_export.html -->
+<div id="modalExportar" class="modal-overlay">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>Exportar Contas a Pagar (.xlsx)</h3>
+            <button type="button" class="btn-close-modal" onclick="fecharModalExportar()">&times;</button>
+        </div>
+
+        <form action="{% url 'exportar_contas_pagar_excel' %}" method="GET" id="formExportar">
+            <div class="modal-body">
+                
+                <div class="form-group-modal mb-3">
+                    <label class="label-modal-bold fw-bold mb-2" style="display: block; font-size: 13px; color: #475569;">Selecione o escopo da exportação:</label>
+                    
+                    <div class="radio-option" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px;">
+                        <input type="radio" id="exportTudo" name="tipo" value="tudo" checked onchange="toggleDatasExportar()">
+                        <label for="exportTudo" style="margin: 0; font-weight: normal;">Toda a base de dados</label>
+                    </div>
+                    
+                    <div class="radio-option" style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                        <input type="radio" id="exportPeriodo" name="tipo" value="periodo" onchange="toggleDatasExportar()">
+                        <label for="exportPeriodo" style="margin: 0; font-weight: normal;">Filtrar por período</label>
+                    </div>
+                </div>
+
+                <!-- Campos de Data (ocultos por padrão) -->
+                <div id="camposDatasExport" style="display: none; gap: 12px; margin-top: 15px; padding-top: 15px; border-top: 1px solid #f1f5f9;">
+                    <div style="flex: 1;">
+                        <label for="data_inicio" style="font-size: 12px; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px;">Data Inicial</label>
+                        <input type="date" id="data_inicio" name="data_inicio" style="width: 100%; height: 36px; padding: 0 8px; border-radius: 4px; border: 1px solid #cbd5e1;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="data_fim" style="font-size: 12px; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px;">Data Final</label>
+                        <input type="date" id="data_fim" name="data_fim" style="width: 100%; height: 36px; padding: 0 8px; border-radius: 4px; border: 1px solid #cbd5e1;">
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="modal-footer" style="margin-top: 15px;">
+                <button type="button" class="btn-cancelar" onclick="fecharModalExportar()">Cancelar</button>
+                <button type="submit" class="btn-salvar-modal" style="background-color: #10b981;" onclick="fecharModalExportarAposDownload()">
+                    Baixar Excel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
