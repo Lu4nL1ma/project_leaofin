@@ -1172,8 +1172,8 @@ def exportar_contas_pagar_excel(request):
     if tipo_exportacao == 'periodo' and data_inicio and data_fim:
         # 2. Ajustado o filtro também para vencimento
         queryset = queryset.filter(vencimento__range=[data_inicio, data_fim])
-        dt_ini_str = datetime.datetime.strptime(data_inicio, '%Y-%m-%d').strftime('%d/%m/%Y')
-        dt_fim_str = datetime.datetime.strptime(data_fim, '%Y-%m-%d').strftime('%d/%m/%Y')
+        dt_ini_str = datetime.strptime(data_inicio, '%Y-%m-%d').strftime('%d/%m/%Y')
+        dt_fim_str = datetime.strptime(data_fim, '%Y-%m-%d').strftime('%d/%m/%Y')
         periodo_texto = f"Período: {dt_ini_str} a {dt_fim_str}"
 
     wb = openpyxl.Workbook()
