@@ -1165,40 +1165,34 @@ def exportar_contas_pagar_excel(request):
     data_inicio = request.GET.get('data_inicio')
     data_fim = request.GET.get('data_fim')
 
-    # 1. Ajustado de data_vencimento para vencimento
+    # Queryset ordenado por vencimento
     queryset = ContaPagar.objects.all().order_by('vencimento')
 
-    periodo_texto = "Base Completa"
     if tipo_exportacao == 'periodo' and data_inicio and data_fim:
-        # 2. Ajustado o filtro também para vencimento
         queryset = queryset.filter(vencimento__range=[data_inicio, data_fim])
-        dt_ini_str = datetime.strptime(data_inicio, '%Y-%m-%d').strftime('%d/%m/%Y')
-        dt_fim_str = datetime.strptime(data_fim, '%Y-%m-%d').strftime('%d/%m/%Y')
-        periodo_texto = f"Período: {dt_ini_str} a {dt_fim_str}"
 
+    # Instância do Workbook
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Contas a Pagar"
     ws.views.sheetView[0].showGridLines = True
 
-    # Estilos Visuais
-    font_titulo = Font(name='Segoe UI', size=16, bold=True, color='1F497D')
-    font_subtitulo = Font(name='Segoe UI', size=11, italic=True, color='595959')
+    # --- ESTILOS VISUAIS ---
     font_header = Font(name='Segoe UI', size=11, bold=True, color='FFFFFF')
     fill_header = PatternFill(start_color='1F497D', end_color='1F497D', fill_type='solid')
-    
+
     font_dados = Font(name='Segoe UI', size=10)
-    fill_zebra = PatternFill(start_color='F2F5F8', end_color='F2F5F8', fill_type='solid')
+    fill_zebra = PatternFill(start_color='F8FAFC', end_color='F8FAFC', fill_type='solid')
     fill_white = PatternFill(start_color='FFFFFF', end_color='FFFFFF', fill_type='solid')
 
     font_total = Font(name='Segoe UI', size=11, bold=True, color='1F497D')
     fill_total = PatternFill(start_color='DCE6F1', end_color='DCE6F1', fill_type='solid')
 
     border_thin = Border(
-        left=Side(style='thin', color='D9D9D9'),
-        right=Side(style='thin', color='D9D9D9'),
-        top=Side(style='thin', color='D9D9D9'),
-        bottom=Side(style='thin', color='D9D9D9')
+        left=Side(style='thin', color='E2E8F0'),
+        right=Side(style='thin', color='E2E8F0'),
+        top=Side(style='thin', color='E2E8F0'),
+        bottom=Side(style='thin', color='E2E8F0')
     )
     border_total = Border(
         top=Side(style='thin', color='1F497D'),
@@ -1209,89 +1203,97 @@ def exportar_contas_pagar_excel(request):
     align_left = Alignment(horizontal='left', vertical='center')
     align_right = Alignment(horizontal='right', vertical='center')
 
-    # Cabeçalho
-    ws.merge_cells('A1:E1')
-    ws['A1'] = "Relatório de Contas a Pagar"
-    ws['A1'].font = font_titulo
-    ws['A1'].alignment = align_left
-
-    ws.merge_cells('A2:E2')
-    ws['A2'] = f"Escopo: {periodo_texto} | Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
-    ws['A2'].font = font_subtitulo
-    ws['A2'].alignment = align_left
-
-    headers = ['ID', 'Fornecedor', 'Data Vencimento', 'Valor (R$)', 'Status']
-    ws.append([])
+    # --- LINHA 1: CABEÇALHO COMPLETO ---
+    headers = [
+        'ID', 'Status', 'Vencimento', 'Fornecedor', 'Categoria', 
+        'Nota Fiscal', 'Parcela', 'Valor (R$)', 'Banco', 'Linha Digitável', 'Observação'
+    ]
     ws.append(headers)
 
-    for col_num, header in enumerate(headers, 1):
-        cell = ws.cell(row=4, column=col_num)
+    # Estiliza o cabeçalho (Linha 1)
+    for col_num in range(1, len(headers) + 1):
+        cell = ws.cell(row=1, column=col_num)
         cell.font = font_header
         cell.fill = fill_header
         cell.alignment = align_center
         cell.border = border_thin
 
-    start_row = 5
+    # --- LINHAS DE DADOS (Iniciando na Linha 2) ---
+    start_row = 2
     for idx, conta in enumerate(queryset, start=start_row):
         is_even = (idx - start_row) % 2 == 0
         current_fill = fill_white if is_even else fill_zebra
 
-        ws.cell(row=idx, column=1, value=conta.id)
-        ws.cell(row=idx, column=2, value=str(getattr(conta, 'fornecedor', '-')))
-        
-        # 3. Leitura do atributo correto: conta.vencimento
-        data_venc = getattr(conta, 'vencimento', None)
-        ws.cell(row=idx, column=3, value=data_venc.strftime('%d/%m/%Y') if data_venc else '-')
-        
-        valor = float(getattr(conta, 'valor', 0) or 0)
-        ws.cell(row=idx, column=4, value=valor)
-        
-        ws.cell(row=idx, column=5, value=str(getattr(conta, 'status', 'Pendente')).upper())
+        venc = getattr(conta, 'vencimento', None)
+        venc_str = venc.strftime('%d/%m/%Y') if venc else '-'
 
-        for col_num in range(1, 6):
+        valor = float(getattr(conta, 'valor', 0) or 0)
+
+        # Preenchimento de todas as colunas do model
+        row_data = [
+            conta.id,
+            str(getattr(conta, 'status', '-')).upper(),
+            venc_str,
+            str(getattr(conta, 'fornecedor', '-')),
+            str(getattr(conta, 'categoria', '-')),
+            str(getattr(conta, 'nota_fiscal', '-')),
+            str(getattr(conta, 'parcela', '-')),
+            valor,
+            str(getattr(conta, 'banco', '-')),
+            str(getattr(conta, 'linha_digitavel', '-')),
+            str(getattr(conta, 'observacao', '-'))
+        ]
+
+        ws.append(row_data)
+
+        # Formatação célula a célula
+        for col_num in range(1, len(headers) + 1):
             c = ws.cell(row=idx, column=col_num)
             c.font = font_dados
             c.fill = current_fill
             c.border = border_thin
-            
-            if col_num in (1, 3, 5):
+
+            # Alinhamentos específicos
+            if col_num in (1, 2, 3, 6, 7):  # ID, Status, Vencimento, Nota Fiscal, Parcela
                 c.alignment = align_center
-            elif col_num == 2:
+            elif col_num in (4, 5, 9, 10, 11):  # Textos / Observações
                 c.alignment = align_left
-            elif col_num == 4:
+            elif col_num == 8:  # Valor
                 c.alignment = align_right
                 c.number_format = 'R$ #,##0.00'
 
     last_row = start_row + len(queryset) - 1 if len(queryset) > 0 else start_row
 
-    # Linha de Totais
-    total_row = last_row + 1
-    ws.cell(row=total_row, column=1, value="TOTAL")
-    ws.merge_cells(start_row=total_row, start_column=1, end_row=total_row, end_column=3)
-    ws.cell(row=total_row, column=1).alignment = Alignment(horizontal='right', vertical='center')
-    
-    sum_cell = ws.cell(
-        row=total_row, 
-        column=4, 
-        value=f"=SUM(D{start_row}:D{last_row})" if len(queryset) > 0 else 0
-    )
-    sum_cell.number_format = 'R$ #,##0.00'
-    sum_cell.alignment = align_right
+    # --- LINHA DE TOTAIS (No final dos dados) ---
+    if len(queryset) > 0:
+        total_row = last_row + 1
+        
+        ws.cell(row=total_row, column=1, value="TOTAL")
+        ws.merge_cells(start_row=total_row, start_column=1, end_row=total_row, end_column=7)
+        ws.cell(row=total_row, column=1).alignment = Alignment(horizontal='right', vertical='center')
 
-    for col_num in range(1, 6):
-        c = ws.cell(row=total_row, column=col_num)
-        c.font = font_total
-        c.fill = fill_total
-        c.border = border_total
+        # Soma automática na coluna de Valor (Coluna H / 8)
+        sum_cell = ws.cell(row=total_row, column=8, value=f"=SUM(H{start_row}:H{last_row})")
+        sum_cell.number_format = 'R$ #,##0.00'
+        sum_cell.alignment = align_right
 
-    # Ajuste das colunas
+        for col_num in range(1, len(headers) + 1):
+            c = ws.cell(row=total_row, column=col_num)
+            c.font = font_total
+            c.fill = fill_total
+            c.border = border_total
+
+    # --- AJUSTES FINAIS ---
+    # Largura automática das colunas
     for col in ws.columns:
         max_len = max(len(str(cell.value or '')) for cell in col)
         col_letter = get_column_letter(col[0].column)
-        ws.column_dimensions[col_letter].width = max(max_len + 5, 14)
+        ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
 
-    ws.freeze_panes = 'A5'
+    # Congela apenas a linha 1 (cabeçalho sempre visível ao rolar)
+    ws.freeze_panes = 'A2'
 
+    # Resposta para download
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
