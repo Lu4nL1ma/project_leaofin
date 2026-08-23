@@ -35,6 +35,7 @@ from django.views.decorators.http import require_POST
 
 STATUS_VALIDOS = [choice[0] for choice in ContaPagar.STATUS_CHOICES]
 
+#teste
 def extrair_texto(celula):
     """Garante que qualquer valor de célula (int, float, None) vire string limpa."""
     if celula is None:
