@@ -26,17 +26,7 @@ from django.db.models.functions import Coalesce
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from app_leao.models import (
-    BancoSaldo,
-    Categoria,
-    ConciliacaoBancaria,
-    ContaPagar,
-    Fornecedor,
-    TransacaoExtrato,
-    FechamentoCaixa,
-    Deposito
-)
-
+from app_leao.models import *   
 try:
     from ofxtools.Parser import OFXTree
 except ImportError:
@@ -275,7 +265,7 @@ def importar_xlsx(request):
     
 def tela_login(request):
     if request.user.is_authenticated:
-        return redirect('homes')
+        return redirect('home')
     return render(request, 'login.html')
 
 
@@ -323,7 +313,7 @@ def login_usuario(request):
         user = authenticate(request, username=usuario_post, password=senha_post)
         if user is not None:
             login(request, user)
-            return redirect('homes')
+            return redirect('home')
         else:
             messages.error(request, "Usuário ou senha incorretos. Tente novamente.")
             return redirect('tela_login')
@@ -335,8 +325,68 @@ def logout_usuario(request):
     logout(request)
     return redirect('tela_login')
 
-
 def home(request):
+    return render(request, 'home.html')
+
+def tarefas(request):
+    if request.method == 'POST':
+        titulo = request.POST.get('titulo')
+        descricao = request.POST.get('descricao')
+        unidade = request.POST.get('unidade')
+        responsavel = request.POST.get('responsavel')
+        prioridade = request.POST.get('prioridade')
+        data_limite = request.POST.get('data_limite') or None
+
+        if titulo:
+            Tarefa.objects.create(
+                titulo=titulo,
+                descricao=descricao,
+                unidade=unidade,
+                responsavel=responsavel,
+                prioridade=prioridade,
+                data_limite=data_limite
+            )
+            messages.success(request, "Tarefa registrada com sucesso!")
+        return redirect('tarefas')
+
+    # Filtros opcionais
+    status_filtro = request.GET.get('status')
+    tarefas = Tarefa.objects.all()
+    
+    if status_filtro:
+        tarefas = tarefas.filter(status=status_filtro)
+
+    total_pendentes = Tarefa.objects.filter(status='pendente').count()
+    total_andamento = Tarefa.objects.filter(status='em_andamento').count()
+    total_concluidas = Tarefa.objects.filter(status='concluida').count()
+
+    context = {
+        'tarefas': tarefas,
+        'total_pendentes': total_pendentes,
+        'total_andamento': total_andamento,
+        'total_concluidas': total_concluidas,
+        'status_filtro': status_filtro,
+    }
+    return render(request, 'tarefas.html', context)
+
+def alternar_status_tarefa(request, pk):
+    tarefa = get_object_or_404(Tarefa, pk=pk)
+    if tarefa.status == 'pendente':
+        tarefa.status = 'em_andamento'
+    elif tarefa.status == 'em_andamento':
+        tarefa.status = 'concluida'
+    else:
+        tarefa.status = 'pendente'
+    tarefa.save()
+    return redirect('tarefas')
+
+def deletar_tarefa(request, pk):
+    tarefa = get_object_or_404(Tarefa, pk=pk)
+    tarefa.delete()
+    messages.info(request, "Tarefa removida com sucesso.")
+    return redirect('tarefas')
+
+def despesas(request):
 
     data_atual = timezone.localdate()
 
@@ -404,7 +454,7 @@ def home(request):
         "categorias": categorias,
         "bancos": bancos_disponiveis,  # mesmo queryset, nome que o modal de edição espera
     }
-    return render(request, "home.html", context)
+    return render(request, "despesas.html", context)
 
 
 def aba_conciliacao(request):
@@ -654,7 +704,7 @@ def form(request):
                 vencimento=vencimento_base,
                 status="Pendente",
             )
-            return redirect("homes")
+            return redirect("home")
 
         valor_parcela = parse_valor(valor_str)
 
@@ -669,7 +719,7 @@ def form(request):
                 vencimento=vencimento_parcela,
                 status="Pendente",
             )
-        return redirect("homes")
+        return redirect("home")
 
     fornecedores_reais = Fornecedor.objects.values_list('razao_social', flat=True).distinct().order_by('razao_social')
     bancos_reais = BancoSaldo.objects.values_list('nome', flat=True).distinct().order_by('nome')
@@ -701,7 +751,7 @@ def conciliar(request, identi):
         )
 
     url_anterior = request.META.get("HTTP_REFERER")
-    return redirect(url_anterior) if url_anterior else redirect("homes")
+    return redirect(url_anterior) if url_anterior else redirect("home")
 
 
 def atualizar_status_json(request, identi):
@@ -798,7 +848,7 @@ def cadastrar_fornecedor(request):
                 email=email, telefone=telefone, logradouro=logradouro, cidade=cidade, estado=estado,
             )
             messages.success(request, f"Fornecedor '{nome_fantasia or razao_social}' cadastrado com sucesso!")
-            return redirect('homes')
+            return redirect('home')
         except Exception as e:
             messages.error(request, f"Erro ao cadastrar fornecedor: {e}")
 
@@ -939,10 +989,10 @@ def baixar_planilha_padrao(request):
 
 def atualizar_registro(request):
     # Volta pra página de onde o form foi enviado (home, provisao, etc.),
-    # em vez de sempre mandar pra "homes" -- mesmo padrão já usado em
+    # em vez de sempre mandar pra "home" -- mesmo padrão já usado em
     # conciliar().
     url_anterior = request.META.get("HTTP_REFERER")
-    destino = url_anterior if url_anterior else redirect('homes').url
+    destino = url_anterior if url_anterior else redirect('home').url
 
     if request.method != "POST":
         return redirect(destino)

@@ -1,6 +1,45 @@
 from django.db import models
 from django.core.validators import RegexValidator
 
+class Tarefa(models.Model):
+    PRIORIDADE_CHOICES = [
+        ('baixa', 'Baixa'),
+        ('media', 'Média'),
+        ('alta', 'Alta'),
+        ('urgente', 'Urgente'),
+    ]
+
+    STATUS_CHOICES = [
+        ('pendente', 'Pendente'),
+        ('em_andamento', 'Em Andamento'),
+        ('concluida', 'Concluída'),
+    ]
+
+    UNIDADE_CHOICES = [
+        ('Geral', 'Geral / Todas'),
+        ('Loja 02 - Aeroporto', 'Loja 02 - Aeroporto'),
+        ('Loja 03 - Castanheira', 'Loja 03 - Castanheira'),
+        ('Loja 04 - Baenão', 'Loja 04 - Baenão'),
+        ('Loja 05 - Pátio Belém', 'Loja 05 - Pátio Belém'),
+    ]
+
+    titulo = models.CharField(max_length=200, verbose_name="Título")
+    descricao = models.TextField(blank=True, null=True, verbose_name="Descrição / Detalhes")
+    unidade = models.CharField(max_length=100, choices=UNIDADE_CHOICES, default='Geral')
+    responsavel = models.CharField(max_length=100, verbose_name="Responsável", blank=True, null=True)
+    prioridade = models.CharField(max_length=20, choices=PRIORIDADE_CHOICES, default='media')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pendente')
+    data_limite = models.DateField(verbose_name="Prazo de Conclusão", null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['status', 'data_limite', '-prioridade']
+        verbose_name = "Tarefa"
+        verbose_name_plural = "Tarefas"
+
+    def __str__(self):
+        return f"{self.titulo} - {self.get_status_display()}"
 
 class BancoSaldo(models.Model):
     nome = models.CharField(max_length=100, verbose_name="Nome do Banco", unique=True)
