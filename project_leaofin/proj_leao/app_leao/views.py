@@ -35,7 +35,7 @@ from django.views.decorators.http import require_POST
 
 STATUS_VALIDOS = [choice[0] for choice in ContaPagar.STATUS_CHOICES]
 
-#teste
+#teste  
 def extrair_texto(celula):
     """Garante que qualquer valor de célula (int, float, None) vire string limpa."""
     if celula is None:
@@ -333,6 +333,8 @@ def tarefas(request):
     if request.method == 'POST':
         titulo = request.POST.get('titulo')
         descricao = request.POST.get('descricao')
+        setor = request.POST.get('setor', 'financeiro')
+        frequencia = request.POST.get('frequencia', 'diaria')
         unidade = request.POST.get('unidade')
         responsavel = request.POST.get('responsavel')
         prioridade = request.POST.get('prioridade')
@@ -342,31 +344,46 @@ def tarefas(request):
             Tarefa.objects.create(
                 titulo=titulo,
                 descricao=descricao,
+                setor=setor,
+                frequencia=frequencia,
                 unidade=unidade,
                 responsavel=responsavel,
                 prioridade=prioridade,
                 data_limite=data_limite
             )
-            messages.success(request, "Tarefa registrada com sucesso!")
+            messages.success(request, "Atividade cadastrada com sucesso!")
         return redirect('tarefas')
 
-    # Filtros opcionais
+    # Filtros
+    frequencia_filtro = request.GET.get('frequencia')
+    setor_filtro = request.GET.get('setor')
     status_filtro = request.GET.get('status')
+    
     tarefas = Tarefa.objects.all()
     
+    if frequencia_filtro:
+        tarefas = tarefas.filter(frequencia=frequencia_filtro)
+    if setor_filtro:
+        tarefas = tarefas.filter(setor=setor_filtro)
     if status_filtro:
         tarefas = tarefas.filter(status=status_filtro)
 
+    # Contadores
+    total_diarias = Tarefa.objects.filter(frequencia='diaria').count()
+    total_recorrentes = Tarefa.objects.filter(frequencia__in=['semanal', 'mensal']).count()
+    total_avulsas = Tarefa.objects.filter(frequencia='avulsa').count()
     total_pendentes = Tarefa.objects.filter(status='pendente').count()
-    total_andamento = Tarefa.objects.filter(status='em_andamento').count()
-    total_concluidas = Tarefa.objects.filter(status='concluida').count()
 
     context = {
         'tarefas': tarefas,
+        'total_diarias': total_diarias,
+        'total_recorrentes': total_recorrentes,
+        'total_avulsas': total_avulsas,
         'total_pendentes': total_pendentes,
-        'total_andamento': total_andamento,
-        'total_concluidas': total_concluidas,
+        'frequencia_filtro': frequencia_filtro,
+        'setor_filtro': setor_filtro,
         'status_filtro': status_filtro,
+        'setores_choices': Tarefa.SETOR_CHOICES,
     }
     return render(request, 'tarefas.html', context)
 
@@ -384,7 +401,7 @@ def alternar_status_tarefa(request, pk):
 def deletar_tarefa(request, pk):
     tarefa = get_object_or_404(Tarefa, pk=pk)
     tarefa.delete()
-    messages.info(request, "Tarefa removida com sucesso.")
+    messages.info(request, "Atividade removida com sucesso.")
     return redirect('tarefas')
 
 def despesas(request):

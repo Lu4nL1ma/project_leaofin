@@ -2,6 +2,23 @@ from django.db import models
 from django.core.validators import RegexValidator
 
 class Tarefa(models.Model):
+    FREQUENCIA_CHOICES = [
+        ('avulsa', 'Avulsa / Única'),
+        ('diaria', 'Rotina Diária (Todo dia)'),
+        ('semanal', 'Semanal (1x por semana)'),
+        ('mensal', 'Mensal (Fechamento/Fiscal)'),
+    ]
+
+    SETOR_CHOICES = [
+        ('financeiro', 'Financeiro / Controladoria'),
+        ('caixa', 'Caixa / Tesouraria'),
+        ('fiscal', 'Fiscal / Tributário'),
+        ('estoque', 'Estoque / Depósito'),
+        ('compras', 'Compras / Fornecedores'),
+        ('rh', 'RH / Departamento Pessoal'),
+        ('operacional', 'Operacional / Loja'),
+    ]
+
     PRIORIDADE_CHOICES = [
         ('baixa', 'Baixa'),
         ('media', 'Média'),
@@ -25,6 +42,8 @@ class Tarefa(models.Model):
 
     titulo = models.CharField(max_length=200, verbose_name="Título")
     descricao = models.TextField(blank=True, null=True, verbose_name="Descrição / Detalhes")
+    setor = models.CharField(max_length=30, choices=SETOR_CHOICES, default='financeiro', verbose_name="Setor")
+    frequencia = models.CharField(max_length=20, choices=FREQUENCIA_CHOICES, default='diaria')
     unidade = models.CharField(max_length=100, choices=UNIDADE_CHOICES, default='Geral')
     responsavel = models.CharField(max_length=100, verbose_name="Responsável", blank=True, null=True)
     prioridade = models.CharField(max_length=20, choices=PRIORIDADE_CHOICES, default='media')
@@ -39,19 +58,7 @@ class Tarefa(models.Model):
         verbose_name_plural = "Tarefas"
 
     def __str__(self):
-        return f"{self.titulo} - {self.get_status_display()}"
-
-class BancoSaldo(models.Model):
-    nome = models.CharField(max_length=100, verbose_name="Nome do Banco", unique=True)
-    saldo = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Saldo (R$)")
-
-    class Meta:
-        verbose_name = "Banco / Saldo"
-        verbose_name_plural = "Bancos / Saldos"
-
-    def __str__(self):
-        return f"{self.nome} - R$ {self.saldo}"
-
+        return f"[{self.get_setor_display()}] {self.titulo}"
 
 class ContaPagar(models.Model):
     STATUS_CHOICES = [
