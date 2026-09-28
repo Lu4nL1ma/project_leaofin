@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeãoFin | Gestão de Rotinas e Tarefas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
+
+    <!-- Header / Navbar -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-xs">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'home' %}" class="w-9 h-9 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl flex items-center justify-center transition">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                </a>
+                <div class="flex items-center gap-2">
+                    <div class="bg-amber-500 text-white p-2 rounded-xl flex items-center justify-center shadow-xs">
+                        <i data-lucide="calendar-check-2" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <span class="font-extrabold text-xl text-slate-900 tracking-tight">Gestão de Rotinas & Tarefas</span>
+                        <span class="hidden sm:inline-block ml-2 px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-800 rounded-full">Controle Operacional</span>
+                    </div>
+                </div>
+            </div>
+            <a href="{% url 'home' %}" class="text-xs font-semibold text-slate-500 hover:text-indigo-600 transition">Voltar ao Menu</a>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- Métricas Rápidas -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Rotinas Diárias</p>
+                    <h3 class="text-2xl font-black text-amber-600 mt-1">{{ total_diarias }}</h3>
+                </div>
+                <div class="w-11 h-11 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
+                    <i data-lucide="repeat" class="w-5 h-5"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Semanais / Mensais</p>
+                    <h3 class="text-2xl font-black text-indigo-600 mt-1">{{ total_recorrentes }}</h3>
+                </div>
+                <div class="w-11 h-11 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+                    <i data-lucide="calendar" class="w-5 h-5"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Tarefas Avulsas</p>
+                    <h3 class="text-2xl font-black text-slate-700 mt-1">{{ total_avulsas }}</h3>
+                </div>
+                <div class="w-11 h-11 bg-slate-100 text-slate-600 rounded-xl flex items-center justify-center">
+                    <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Pendentes</p>
+                    <h3 class="text-2xl font-black text-rose-600 mt-1">{{ total_pendentes }}</h3>
+                </div>
+                <div class="w-11 h-11 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center">
+                    <i data-lucide="clock" class="w-5 h-5"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alertas do Django -->
+        {% if messages %}
+            <div class="space-y-2 mb-6">
+                {% for message in messages %}
+                    <div class="p-3.5 text-xs font-semibold rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="check" class="w-4 h-4 text-emerald-600"></i>
+                            <span>{{ message }}</span>
+                        </div>
+                        <button type="button" onclick="this.parentElement.remove()"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Conteúdo Principal -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Formulário -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs h-fit">
+                <h2 class="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
+                    <i data-lucide="plus-circle" class="w-4 h-4 text-indigo-600"></i> Nova Atividade
+                </h2>
+
+                <form method="POST" action="" class="space-y-4 text-xs font-semibold text-slate-600">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block mb-1">Título da Atividade</label>
+                        <input type="text" name="titulo" placeholder="Ex: Conferir Saldo de Fechamento" required
+                               class="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-normal">
+                    </div>
+
+                    <!-- Campo de Recorrência / Frequência -->
+                    <div>
+                        <label class="block mb-1">Tipo / Frequência de Execução</label>
+                        <select name="frequencia" class="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-normal bg-white">
+                            <option value="diaria" selected>Rotina Diária (Todo dia)</option>
+                            <option value="semanal">Semanal (1x na semana)</option>
+                            <option value="mensal">Mensal (Fechamento / Fiscal)</option>
+                            <option value="avulsa">Avulsa / Pontual</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block mb-1">Unidade / Loja</label>
+                        <select name="unidade" class="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-normal bg-white">
+                            <option value="Geral">Geral / Todas as Lojas</option>
+                            <option value="Loja 02 - Aeroporto">Loja 02 - Aeroporto</option>
+                            <option value="Loja 03 - Castanheira">Loja 03 - Castanheira</option>
+                            <option value="Loja 04 - Baenão">Loja 04 - Baenão</option>
+                            <option value="Loja 05 - Pátio Belém">Loja 05 - Pátio Belém</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block mb-1">Prioridade</label>
+                            <select name="prioridade" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-normal bg-white">
+                                <option value="baixa">Baixa</option>
+                                <option value="media" selected>Média</option>
+                                <option value="alta">Alta</option>
+                                <option value="urgente">Urgente</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block mb-1">Prazo / Horário Limite</label>
+                            <input type="date" name="data_limite" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-normal">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block mb-1">Responsável</label>
+                        <input type="text" name="responsavel" placeholder="Ex: Gerente da Unidade"
+                               class="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-normal">
+                    </div>
+
+                    <div>
+                        <label class="block mb-1">Instruções / Detalhes</label>
+                        <textarea name="descricao" rows="3" placeholder="Passo a passo ou observações..."
+                                  class="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-normal"></textarea>
+                    </div>
+
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition shadow-xs">
+                        Cadastrar Atividade
+                    </button>
+                </form>
+            </div>
+
+            <!-- Lista com Abas de Frequência -->
+            <div class="lg:col-span-2 space-y-4">
+                
+                <!-- Abas Superiores de Frequência -->
+                <div class="flex items-center gap-2 overflow-x-auto pb-1 border-b border-slate-200">
+                    <a href="{% url 'tarefas' %}" class="px-3.5 py-2 rounded-t-xl text-xs font-bold transition {% if not frequencia_filtro %}bg-white border-t-2 border-indigo-600 text-indigo-600 shadow-xs{% else %}text-slate-500 hover:text-slate-900{% endif %}">
+                        Todas
+                    </a>
+                    <a href="?frequencia=diaria" class="px-3.5 py-2 rounded-t-xl text-xs font-bold transition {% if frequencia_filtro == 'diaria' %}bg-white border-t-2 border-amber-500 text-amber-600 shadow-xs{% else %}text-slate-500 hover:text-slate-900{% endif %} flex items-center gap-1.5">
+                        <i data-lucide="repeat" class="w-3.5 h-3.5"></i> Diárias
+                    </a>
+                    <a href="?frequencia=semanal" class="px-3.5 py-2 rounded-t-xl text-xs font-bold transition {% if frequencia_filtro == 'semanal' %}bg-white border-t-2 border-indigo-600 text-indigo-600 shadow-xs{% else %}text-slate-500 hover:text-slate-900{% endif %} flex items-center gap-1.5">
+                        <i data-lucide="calendar" class="w-3.5 h-3.5"></i> Semanais
+                    </a>
+                    <a href="?frequencia=mensal" class="px-3.5 py-2 rounded-t-xl text-xs font-bold transition {% if frequencia_filtro == 'mensal' %}bg-white border-t-2 border-indigo-600 text-indigo-600 shadow-xs{% else %}text-slate-500 hover:text-slate-900{% endif %} flex items-center gap-1.5">
+                        <i data-lucide="calendar-days" class="w-3.5 h-3.5"></i> Mensais
+                    </a>
+                    <a href="?frequencia=avulsa" class="px-3.5 py-2 rounded-t-xl text-xs font-bold transition {% if frequencia_filtro == 'avulsa' %}bg-white border-t-2 border-slate-700 text-slate-800 shadow-xs{% else %}text-slate-500 hover:text-slate-900{% endif %} flex items-center gap-1.5">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i> Avulsas
+                    </a>
+                </div>
+
+                <!-- Lista de Cards -->
+                <div class="space-y-3">
+                    {% for tarefa in tarefas %}
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-300 transition">
+                        
+                        <div class="flex items-start gap-3.5 flex-1">
+                            <!-- Alternar Status -->
+                            <a href="{% url 'alternar_status_tarefa' tarefa.id %}" class="mt-0.5 text-slate-300 hover:text-indigo-600 transition" title="Clique para alternar o status">
+                                {% if tarefa.status == 'concluida' %}
+                                    <i data-lucide="check-circle-2" class="w-6 h-6 text-emerald-500 fill-emerald-50"></i>
+                                {% elif tarefa.status == 'em_andamento' %}
+                                    <i data-lucide="circle-dot" class="w-6 h-6 text-amber-500"></i>
+                                {% else %}
+                                    <i data-lucide="circle" class="w-6 h-6 hover:text-slate-500"></i>
+                                {% endif %}
+                            </a>
+
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h4 class="font-bold text-slate-900 text-sm {% if tarefa.status == 'concluida' %}line-through text-slate-400{% endif %}">
+                                        {{ tarefa.titulo }}
+                                    </h4>
+
+                                    <!-- Badge Frequência -->
+                                    {% if tarefa.frequencia == 'diaria' %}
+                                        <span class="px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded-full flex items-center gap-1">
+                                            <i data-lucide="repeat" class="w-2.5 h-2.5"></i> Diária
+                                        </span>
+                                    {% elif tarefa.frequencia == 'semanal' %}
+                                        <span class="px-2 py-0.5 text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full flex items-center gap-1">
+                                            <i data-lucide="calendar" class="w-2.5 h-2.5"></i> Semanal
+                                        </span>
+                                    {% elif tarefa.frequencia == 'mensal' %}
+                                        <span class="px-2 py-0.5 text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 rounded-full flex items-center gap-1">
+                                            <i data-lucide="calendar-days" class="w-2.5 h-2.5"></i> Mensal
+                                        </span>
+                                    {% else %}
+                                        <span class="px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-full">
+                                            Avulsa
+                                        </span>
+                                    {% endif %}
+
+                                    <!-- Badge Prioridade -->
+                                    {% if tarefa.prioridade == 'urgente' %}
+                                        <span class="px-2 py-0.5 text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 rounded-full">Urgente</span>
+                                    {% elif tarefa.prioridade == 'alta' %}
+                                        <span class="px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded-full">Alta</span>
+                                    {% endif %}
+                                </div>
+
+                                {% if tarefa.descricao %}
+                                    <p class="text-xs text-slate-500">{{ tarefa.descricao }}</p>
+                                {% endif %}
+
+                                <div class="flex items-center gap-4 text-[11px] text-slate-400 pt-1 font-medium flex-wrap">
+                                    <span class="flex items-center gap-1 text-slate-600">
+                                        <i data-lucide="building" class="w-3.5 h-3.5 text-slate-400"></i> {{ tarefa.unidade }}
+                                    </span>
+                                    {% if tarefa.responsavel %}
+                                    <span class="flex items-center gap-1 text-slate-600">
+                                        <i data-lucide="user" class="w-3.5 h-3.5 text-slate-400"></i> {{ tarefa.responsavel }}
+                                    </span>
+                                    {% endif %}
+                                    {% if tarefa.data_limite %}
+                                    <span class="flex items-center gap-1 text-rose-600 font-semibold">
+                                        <i data-lucide="calendar" class="w-3.5 h-3.5"></i> Prazo: {{ tarefa.data_limite|date:"d/m/Y" }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ações -->
+                        <div class="flex items-center gap-2 self-end sm:self-center">
+                            <a href="{% url 'deletar_tarefa' tarefa.id %}" onclick="return confirm('Deseja excluir esta atividade?')" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" title="Excluir">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="bg-white p-12 text-center rounded-2xl border border-slate-200 text-slate-400">
+                        <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                        <p class="text-xs font-semibold">Nenhuma atividade cadastrada nesta categoria.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

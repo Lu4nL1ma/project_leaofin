@@ -1,0 +1,70 @@
+<div class="modal-overlay" id="modalEditar">
+    <div class="modal-box modal-box-lg">
+        <div class="modal-header">
+            <h2>Editar Registro</h2>
+            <button type="button" class="modal-close" onclick="fecharModalEditar()">&times;</button>
+        </div>
+
+        <form method="POST" action="{% url 'atualizar_registro' %}" id="formEditarRegistro">
+            {% csrf_token %}
+            <input type="hidden" name="id" id="editar_id">
+
+            <div class="modal-form-grid">
+                <div class="modal-form-group">
+                    <label for="editar_vencimento">Vencimento</label>
+                    <input type="date" id="editar_vencimento" name="vencimento">
+                </div>
+
+                <div class="modal-form-group">
+                    <label for="editar_fornecedor">Fornecedor</label>
+                    <select id="editar_fornecedor" name="fornecedor">
+                        <option value="">Selecione...</option>
+                        {% for f in fornecedores %}
+                            <option value="{{ f.nome_fantasia|default:f.razao_social }}">{{ f.nome_fantasia|default:f.razao_social }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="modal-form-group">
+                    <label for="editar_categoria">Categoria</label>
+                    <select id="editar_categoria" name="categoria">
+                        <option value="">Selecione...</option>
+                        {% for c in categorias %}
+                            <option value="{{ c.nome }}">{{ c.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="modal-form-group">
+                    <label for="editar_banco">Banco</label>
+                    <select id="editar_banco" name="banco">
+                        <option value="">Selecione...</option>
+                        {% for b in bancos %}
+                            <option value="{{ b.nome }}">{{ b.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="modal-form-group">
+                    <label for="editar_parcela">Parcela</label>
+                    <input type="text" id="editar_parcela" name="parcela" placeholder="Ex: 1/1">
+                </div>
+
+                <div class="modal-form-group">
+                    <label for="editar_valor">Valor</label>
+                    <input type="text" id="editar_valor" name="valor" placeholder="Ex: 100.00">
+                </div>
+
+                <div class="modal-form-group full-width">
+                    <label for="editar_observacao">Observação</label>
+                    <input type="text" id="editar_observacao" name="observacao" placeholder="Ex: Nota">
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="fecharModalEditar()">Cancelar</button>
+                <button type="submit" class="btn-salvar-modal">Salvar Alterações</button>
+            </div>
+        </form>
+    </div>
+</div>
