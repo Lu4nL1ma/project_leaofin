@@ -1,0 +1,38 @@
+<div id="modalUpload" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+        
+        <!-- PASSO 1: SELEÇÃO DO ARQUIVO -->
+        <div id="modalStepUpload">
+            <h3>Importar Planilha XLSX</h3>
+
+            <a href="{% url 'baixar_planilha_padrao' %}"> Baixar Planilha Padrão </a>
+            
+            <form id="formUploadXlsx" action="{% url 'importar_xlsx' %}" method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <div id="dropzoneXlsx" style="border: 2px dashed #ccc; padding: 20px; text-align: center; cursor: pointer;">
+                    <p>Clique aqui para selecionar o arquivo .xlsx</p>
+                    <input type="file" id="arquivo_xlsx" name="arquivo_xlsx" accept=".xlsx" style="display: none;">
+                    <div id="nomeArquivoXlsx" style="font-weight: bold; margin-top: 10px;"></div>
+                </div>
+
+                <div style="margin-top: 15px; text-align: right;">
+                    <button type="button" onclick="fecharModalUpload()">Cancelar</button>
+                    <button type="submit" id="btnImportar">Importar</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- PASSO 2: RESULTADO DA IMPORTAÇÃO -->
+        <div id="modalStepResultado" style="display: none;">
+            <h3>Resultado da Importação</h3>
+            <div id="conteudoResultado"></div>
+            
+            <div style="margin-top: 15px; text-align: right;">
+                <button type="button" onclick="voltarParaUpload()">Nova Importação</button>
+                <button type="button" onclick="concluirEAtualizar()">Concluir</button>
+            </div>
+        </div>
+
+    </div>
+</div>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conciliação Financeira - LeãoFin</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 min-h-screen py-10 px-4 font-sans text-slate-800">
+
+    <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-md border border-slate-200 p-8">
+        <!-- Cabeçalho -->
+        <div class="mb-6">
+            <h1 class="text-2xl font-bold text-slate-800">Conciliação de Contas a Pagar (XLSX)</h1>
+            <p class="text-xs text-slate-500 mt-1">
+                Confronte a sua base de **Provisionado (Planilha 1)** contra o **Extrato Bancário** ou contra os **Boletos em Mãos / DDA (Planilha 2)**.
+            </p>
+        </div>
+
+        <!-- Mensagens de Alerta / Erro -->
+        {% if messages %}
+            <div class="mb-6 space-y-2">
+                {% for message in messages %}
+                    <div class="p-4 text-xs rounded-lg font-medium {% if message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200{% else %}bg-green-50 text-green-700 border border-green-200{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Formulário de Upload com Seletor de Modo -->
+        <form method="POST" enctype="multipart/form-data" class="space-y-5">
+            {% csrf_token %}
+
+            <!-- Seletor do Tipo de Conciliação -->
+            <div class="border border-blue-200 bg-blue-50/50 rounded-lg p-4">
+                <label class="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
+                    Tipo de Auditoria / Conciliação
+                </label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label class="flex items-start gap-3 p-3 bg-white border border-slate-200 rounded-lg cursor-pointer hover:border-blue-400 transition-colors">
+                        <input type="radio" name="modo_auditoria" value="BANCO" checked class="mt-0.5 text-blue-600 focus:ring-blue-500">
+                        <div>
+                            <span class="block text-xs font-semibold text-slate-800">Provisionado vs Extrato Bancário</span>
+                            <span class="block text-[11px] text-slate-500 mt-0.5">Audita baixas efetivas, conta bancária e variações de juros/multa no caixa.</span>
+                        </div>
+                    </label>
+                    <label class="flex items-start gap-3 p-3 bg-white border border-slate-200 rounded-lg cursor-pointer hover:border-blue-400 transition-colors">
+                        <input type="radio" name="modo_auditoria" value="BOLETOS" class="mt-0.5 text-blue-600 focus:ring-blue-500">
+                        <div>
+                            <span class="block text-xs font-semibold text-slate-800">Provisionado vs Boletos em Mãos</span>
+                            <span class="block text-[11px] text-slate-500 mt-0.5">Confronte com remessa DDA/Código de barras antes de agendar a baixa.</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Inputs das Planilhas -->
+            <div class="grid grid-cols-1 gap-4">
+                <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">
+                        PLANILHA 1 (Contas a Pagar / Provisionado) <span class="text-red-500">*</span>
+                    </label>
+                    <p class="text-[11px] text-slate-400 mb-2">Sua planilha interna contendo o relatório de provisão a pagar.</p>
+                    <input type="file" name="planilha_1" accept=".xlsx" class="text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 w-full cursor-pointer" required />
+                </div>
+
+                <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">
+                        PLANILHA 2 (Extrato Bancário ou Boletos em Mãos) <span class="text-red-500">*</span>
+                    </label>
+                    <p class="text-[11px] text-slate-400 mb-2">Base de confronto enviada pelo banco ou arquivo de relatório de boletos.</p>
+                    <input type="file" name="planilha_2" accept=".xlsx" class="text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 w-full cursor-pointer" required />
+                </div>
+            </div>
+
+            <!-- Botão de Ação -->
+            <div class="pt-4 border-t border-slate-100 flex justify-end">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg text-sm transition-colors shadow-sm inline-flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Processar Conciliação e Baixar
+                </button>
+            </div>
+        </form>
+    </div>
+
+</body>
+</html>
